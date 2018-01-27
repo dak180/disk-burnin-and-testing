@@ -488,4 +488,3 @@ if [ "${osflavor}" = "FreeBSD" ]; then
 	sed -i '' -e '/SMART Error Log Version/d' "${Log_File}"
 fi
 
-
