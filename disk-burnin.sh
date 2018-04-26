@@ -420,6 +420,28 @@ run_badblocks_test() {
 	echo_str "Finished badblocks test on drive /dev/${driveID}: $(date)"
 }
 
+run_secure_erase() {
+	push_header
+	echo_str "+ Run secure erase on drive /dev/${driveID}: $(date)"
+	push_header
+
+	if [ "${Dry_Run}" -eq "0" ]; then
+		#
+		# This is the command which erases all data on the disk:
+		#
+		#Linux
+		hdparm --user-master u --security-set-pass Eins "/dev/${driveID}"
+		hdparm --user-master u --security-erase-enhanced Eins "/dev/${driveID}"
+		# FreeBSD
+		# camcontrol -s -h Eins "/dev/${driveID}"
+
+	else
+		echo_str "Dry run: would run secure ersase on /dev/${driveID}"
+	fi
+
+	echo_str "Finished secure erase test on drive /dev/${driveID}: $(date)"
+}
+
 ######################################################################
 #
 # Action begins here

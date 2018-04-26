@@ -9,11 +9,12 @@ Be aware that:
                                                                            
 Performs these steps:                                                      
                                                                            
-1. Run SMART short test                                                  
-2. Run SMART extended test                                               
-3. Run `badblocks`                                                         
-4. Run SMART short test                                                  
-5. Run SMART extended test                                               
+1. Run SMART short test
+2. Run SMART extended test
+3. Run `badblocks` (if NOT started with -n)
+3b. Run `hdparm secure-erase` (if started with -s)
+4. Run SMART short test
+5. Run SMART extended test
                                                                            
 The script sleeps after starting each SMART test, using a duration based on the polling interval reported by the disk, and adding an additional delay to account for discrepancies.               
                                                                            
