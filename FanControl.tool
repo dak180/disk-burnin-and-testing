@@ -1,10 +1,14 @@
 #!/bin/bash
 
+#
 # Config
+#
 # ipmitool raw 0x3a 0x01  ${CPU_FAN1} ${Reserved} ${REAR_FAN1} ${REAR_FAN2} ${FRNT_FAN1} ${FRNT_FAN2} ${FRNT_FAN3} ${Reserved}
 
+configFile="${1}"
+
 # Write out a default config file
-fcConfig() {
+function fcConfig {
 	tee > "${configFile}" << EOF
 # FanControl config file
 
@@ -90,18 +94,47 @@ EOF
 	exit 0
 }
 
+#
+# Functions Start Here
+#
 
 # ipmi sensor command
-ipmiSens() {
+function ipmiSens {
 	local sensName="${1}"
 	ipmitool -c sdr get "${sensName}" | cut -d ',' -f 2
 }
 
 
 # Convert Hex to decimal
-hexConv() {
+function hexConv {
 	local hexIn="${1}"
 	echo "$((0x${hexIn}))"
+}
+
+# Get average or high HD temperature.
+# shellcheck disable=SC2004
+function hdTemp {
+	local hdNum
+	local hdTempCur
+	local hdTempAv="0"
+	local hdTempMx="0"
+
+	for hdNum in "${hdName[@]}"; do
+		hdTempCur="$(smartctl -a "/dev/${hdNum}" | grep "194" | sed -E 's:[[:space:]]+: :g' | cut -d ' ' -f 10)"
+		hdTempAv=$(( ${hdTempAv} + ${hdTempCur} ))
+		if [ "${hdTempMx}" -gt "${hdTempCur}" ]; then
+			hdTempMx="${hdTempMx}"
+		else
+			hdTempMx="${hdTempCur}"
+		fi
+	done
+	hdTempAv=$(( ${hdTempAv} / ${#hdName[@]} ))
+
+	if [ "${hdTempAv}" -gt "${hdTempMx}" ]; then
+		echo "${hdTempAv}"
+	else
+		echo "${hdTempMx}"
+	fi
 }
 
 
@@ -109,7 +142,7 @@ hexConv() {
 # Main Script Starts Here
 #
 
-#check if needed software is installed
+# Check if needed software is installed.
 commands=(
 grep
 awk
@@ -117,6 +150,8 @@ sed
 tr
 cut
 sleep
+smartctl
+
 )
 for command in "${commands[@]}"; do
 	if ! type "${command}" &> /dev/null; then
@@ -126,16 +161,25 @@ for command in "${commands[@]}"; do
 done
 
 
-
-if [ ! -f "${configFile}" ]; then
+if [ -z "${configFile}" ]; then
+	echo "Please specify a config file location." >&2
+	exit 1
+elif [ ! -f "${configFile}" ]; then
 	fcConfig
 fi
 
 # Source external config file
+# shellcheck source=/dev/null
 . "${configFile}"
 
 
+# Do not run if the config file has not been edited.
 if [ ! "${defaultFile}" = "0" ]; then
 	echo "Please edit the config file for your setup" >&2
 	exit 1
 fi
+
+# Set fans to auto on exit
+trap 'ipmitool raw 0x3a 0x01 0 0 0 0 0 0 0 0' 0 1 2 3 6
+
+
