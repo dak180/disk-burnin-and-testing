@@ -24,7 +24,8 @@ difFanDuty="10" # The difference maintained between intake and exaust fans
 
 # Temperatures in Celsius
 targetDriveTemp="30" # The temperature that we try to maintain.
-ambTempVariance="5" # How many degrees the ambient temperature may effect the target
+maxDriveTemp="39" # Do not let drives get hooter than this.
+ambTempVariance="2" # How many degrees the ambient temperature may effect the target
 
 # Temp sensors
 cpuTempSens[0]="CPU1 Temp"		# CPU temp
@@ -111,8 +112,41 @@ function hexConv {
 	echo "$((0x${hexIn}))"
 }
 
+# Get set point temp
+function targetTemp {
+	local ambTemIn
+	local ambTemOut="0"
+	local ambTemCur
+
+	for ambTemIn in "${ambTempSens[@]}"; do
+# 		Get the current ambent temp readings.
+		ambTemCur="$(ipmiSens "${ambTemIn}")"
+# 		Start adding temps for an average.
+		ambTemOut=$(( ambTemOut + ambTemCur ))
+	done
+# 	Divide by number of sensors for average.
+	ambTemOut="$(( ambTemOut / ${#ambTempSens[@]} ))"
+
+# 	Alow the target temp to vary by $ambTempVariance degrees based on
+# 	a difference between ambent internal temp and $targetDriveTemp.
+	if [ "${ambTemOut}" = "${targetDriveTemp}" ]; then
+		echo "${ambTemOut}"
+	else
+		if [ "${ambTemOut}" -gt "${targetDriveTemp}" ]; then
+			if [ "${ambTemOut}" -gt "$(( targetDriveTemp + ambTempVariance ))" ]; then
+				echo "$(( targetDriveTemp + ambTempVariance ))"
+			fi
+		elif [ "${targetDriveTemp}" -gt "${ambTemOut}" ]; then
+			if [ "$(( targetDriveTemp - ambTempVariance ))" -gt "${ambTemOut}" ]; then
+				echo "$(( targetDriveTemp - ambTempVariance ))"
+			fi
+		else
+			echo "${ambTemOut}"
+		fi
+	fi
+}
+
 # Get average or high HD temperature.
-# shellcheck disable=SC2004
 function hdTemp {
 	local hdNum
 	local hdTempCur
@@ -120,20 +154,27 @@ function hdTemp {
 	local hdTempMx="0"
 
 	for hdNum in "${hdName[@]}"; do
+# 		Get the temp for the current drive.
 		hdTempCur="$(smartctl -a "/dev/${hdNum}" | grep "194" | sed -E 's:[[:space:]]+: :g' | cut -d ' ' -f 10)"
-		hdTempAv=$(( ${hdTempAv} + ${hdTempCur} ))
+# 		Start adding temps for an average.
+		hdTempAv="$(( hdTempAv + hdTempCur ))"
+
+# 		Keep track of the highest current temp
 		if [ "${hdTempMx}" -gt "${hdTempCur}" ]; then
 			hdTempMx="${hdTempMx}"
 		else
 			hdTempMx="${hdTempCur}"
 		fi
 	done
-	hdTempAv=$(( ${hdTempAv} / ${#hdName[@]} ))
+# 	Divide by number of drives for average.
+	hdTempAv="$(( hdTempAv / ${#hdName[@]} ))"
 
-	if [ "${hdTempAv}" -gt "${hdTempMx}" ]; then
-		echo "${hdTempAv}"
-	else
+# 	If the hottest drive matches/exceeds the max temp use that instead
+# 	of the average.
+	if [ "${hdTempMx}" -ge "${maxDriveTemp}" ]; then
 		echo "${hdTempMx}"
+	else
+		echo "${hdTempAv}"
 	fi
 }
 
