@@ -28,7 +28,8 @@ maxDriveTemp="39" # Do not let drives get hooter than this.
 ambTempVariance="2" # How many degrees the ambient temperature may effect the target
 
 # Temp sensors
-cpuTempSens[0]="CPU1 Temp"		# CPU temp
+# The names used by ipmi.
+# cpuTempSens[0]="CPU1 Temp"		# CPU temp	Currently unused
 ambTempSens[0]="MB Temp"		# Ambient temp
 ambTempSens[1]="Card Side Temp"	# Ambient temp
 
@@ -93,8 +94,8 @@ ipmiRead() {
 
 # PID Controls
 Kp=4	#  Proportional tunable constant
-Ki=0	#  Integral tunable constant
-Kd=40	#  Derivative tunable constant
+# Ki=0	#  Integral tunable constant	Currently unused
+# Kd=40	#  Derivative tunable constant	Currently unused
 
 EOF
 	exit 0
@@ -198,18 +199,21 @@ function setFanDuty {
 
 	local count="0"
 	for cpuFan in "${CPU_FAN[@]}"; do
+		: "${cpuFan}"
 		CPU_FAN[${count}]="${cpuFanSet}"
 		((count++))
 	done
 
 	count="0"
 	for intakeFan in "${FRNT_FAN[@]}"; do
+		: "${intakeFan}"
 		FRNT_FAN[${count}]="${intakeFanSet}"
 		((count++))
 	done
 
 	count="0"
 	for outputFan in "${REAR_FAN[@]}"; do
+		: "${outputFan}"
 		REAR_FAN[${count}]="${outputFanSet}"
 		((count++))
 	done
@@ -315,7 +319,8 @@ while true; do
 
 
 # 	Write out the new duty levels to ipmi.
-	ipmitool ipmiWrite
+# 	shellcheck disable=SC2086
+	ipmitool ${ipmiWrite}
 
 	sleep "$(( 60 * diskCheckTempInterval ))"
 done
