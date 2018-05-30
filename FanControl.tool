@@ -187,6 +187,34 @@ function hdTemp {
 }
 
 
+# Set fan duty levels
+function setFanDuty {
+	local cpuFan
+	local intakeFan
+	local outputFan
+	local cpuFanSet="${1}"
+	local intakeFanSet="${2}"
+	local outputFanSet="$(( intakeFanSet - difFanDuty ))"
+
+	local count="0"
+	for cpuFan in "${CPU_FAN[@]}"; do
+		CPU_FAN[${count}]="${cpuFanSet}"
+		((count++))
+	done
+
+	count="0"
+	for intakeFan in "${FRNT_FAN[@]}"; do
+		FRNT_FAN[${count}]="${intakeFanSet}"
+		((count++))
+	done
+
+	count="0"
+	for outputFan in "${REAR_FAN[@]}"; do
+		REAR_FAN[${count}]="${outputFanSet}"
+		((count++))
+	done
+}
+
 # The proportional calculation
 function proportionalK {
 	local errorK="${1}"
@@ -255,3 +283,39 @@ ipmiRead
 #
 
 
+while true; do
+	setPoint="$(targetTemp)"
+	processVar="$(hdTemp)"
+
+# 	Get the error or set to 0 (we only cool, we do not heat).
+	if [ "${processVar}" -le "${setPoint}" ]; then
+		errorK="0"
+	else
+		errorK="$(( processVar - setPoint ))"
+	fi
+
+
+# 	Compute an unqualified control output (P+I+D).
+	proportionalVal="$(proportionalK "${errorK}")"
+	unQualConrtolOutput="${proportionalVal}"
+
+
+# 	Qualify the output to ensure we are inside the constraints.
+	if [ "${unQualConrtolOutput}" -lt "${minFanDuty}" ]; then
+		qualConrtolOutput="${minFanDuty}"
+	elif [ "${unQualConrtolOutput}" -gt "${maxFanDuty}" ]; then
+		qualConrtolOutput="${maxFanDuty}"
+	else
+		qualConrtolOutput="${unQualConrtolOutput}"
+	fi
+
+
+# 	Set the duty levels for each fan type.
+	setFanDuty "${autoFanDuty}" "${qualConrtolOutput}"
+
+
+# 	Write out the new duty levels to ipmi.
+	ipmitool ipmiWrite
+
+	sleep "$(( 60 * diskCheckTempInterval ))"
+done
