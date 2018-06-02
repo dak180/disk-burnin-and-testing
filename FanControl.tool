@@ -75,12 +75,19 @@ ada3
 # Make sure that you set values here corectly for your board.
 
 # The command to set the desired fan duty levels.
-ipmiWrite="raw 0x3a 0x01 ${CPU_FAN[0]} ${NIL_FAN[0]} ${REAR_FAN[0]} ${NIL_FAN[1]} ${FRNT_FAN[0]} ${FRNT_FAN[1]} ${NIL_FAN[2]} ${NIL_FAN[3]}"
+function ipmiWrite {
+	if ! ipmitool raw 0x3a 0x01 "${CPU_FAN[0]}" "${NIL_FAN[0]}" "${REAR_FAN[0]}" "${NIL_FAN[1]}" "${FRNT_FAN[0]}" "${FRNT_FAN[1]}" "${NIL_FAN[2]}" "${NIL_FAN[3]}"; then
+		return ${?}
+	fi
+}
 
 # A function to read the current fan duty levels.
 # It conversts hex values to decimal and seperates them by type.
-ipmiRead() {
-	read -ra rawFanAray <<< "$(ipmitool raw 0x3a 0x02 | sed -e 's:^ *::')"
+function ipmiRead {
+	local rawFan
+	local rawFanAray
+	rawFan="$(ipmitool raw 0x3a 0x02 | sed -e 's:^ *::')"
+	read -ra rawFanAray <<< ${rawFan}
 	CPU_FAN[0]="$(hexConv "${rawFanAray[0]}")"
 	NIL_FAN[0]="$(hexConv "${rawFanAray[1]}")"
 	REAR_FAN[0]="$(hexConv "${rawFanAray[2]}")"
@@ -93,9 +100,9 @@ ipmiRead() {
 
 
 # PID Controls
-Kp=4	#  Proportional tunable constant
-# Ki=0	#  Integral tunable constant	Currently unused
-# Kd=40	#  Derivative tunable constant	Currently unused
+Kp="7"	#  Proportional tunable constant
+# Ki="0"	#  Integral tunable constant	Currently unused
+# Kd="40"	#  Derivative tunable constant	Currently unused
 
 EOF
 	exit 0
@@ -141,14 +148,15 @@ function targetTemp {
 		if [ "${ambTemOut}" -gt "${targetDriveTemp}" ]; then
 			if [ "${ambTemOut}" -gt "$(( targetDriveTemp + ambTempVariance ))" ]; then
 				echo "$(( targetDriveTemp + ambTempVariance ))"
+				return 0
 			fi
 		elif [ "${targetDriveTemp}" -gt "${ambTemOut}" ]; then
 			if [ "$(( targetDriveTemp - ambTempVariance ))" -gt "${ambTemOut}" ]; then
 				echo "$(( targetDriveTemp - ambTempVariance ))"
+				return 0
 			fi
-		else
-			echo "${ambTemOut}"
 		fi
+		echo "${ambTemOut}"
 	fi
 }
 
@@ -190,11 +198,11 @@ function hdTemp {
 
 # Set fan duty levels
 function setFanDuty {
+	local cpuFanSet="${1}"
+	local intakeFanSet="${2}"
 	local cpuFan
 	local intakeFan
 	local outputFan
-	local cpuFanSet="${1}"
-	local intakeFanSet="${2}"
 	local outputFanSet="$(( intakeFanSet - difFanDuty ))"
 
 	local count="0"
@@ -233,6 +241,18 @@ function proportionalK {
 # Main Script Starts Here
 #
 
+
+if [ -z "${configFile}" ]; then
+	echo "Please specify a config file location." >&2
+	exit 1
+elif [ ! -f "${configFile}" ]; then
+	fcConfig
+fi
+
+# Source external config file
+# shellcheck source=/dev/null
+. "${configFile}"
+
 # Check if needed software is installed.
 commands=(
 grep
@@ -252,18 +272,6 @@ for command in "${commands[@]}"; do
 done
 
 
-if [ -z "${configFile}" ]; then
-	echo "Please specify a config file location." >&2
-	exit 1
-elif [ ! -f "${configFile}" ]; then
-	fcConfig
-fi
-
-# Source external config file
-# shellcheck source=/dev/null
-. "${configFile}"
-
-
 # Do not run if the config file has not been edited.
 if [ ! "${defaultFile}" = "0" ]; then
 	echo "Please edit the config file for your setup" >&2
@@ -271,7 +279,7 @@ if [ ! "${defaultFile}" = "0" ]; then
 fi
 
 # Set fans to auto on exit
-trap 'ipmitool raw 0x3a 0x01 ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty}' 0 1 2 3 6
+# trap 'ipmitool raw 0x3a 0x01 ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty}' 0 1 2 3 6
 
 
 #
@@ -301,7 +309,7 @@ while true; do
 
 # 	Compute an unqualified control output (P+I+D).
 	proportionalVal="$(proportionalK "${errorK}")"
-	unQualConrtolOutput="${proportionalVal}"
+	unQualConrtolOutput="$(( proportionalVal + minFanDuty ))"
 
 
 # 	Qualify the output to ensure we are inside the constraints.
@@ -320,7 +328,9 @@ while true; do
 
 # 	Write out the new duty levels to ipmi.
 # 	shellcheck disable=SC2086
-	ipmitool ${ipmiWrite}
+	if ! ipmiWrite; then
+		exit 1
+	fi
 
 	sleep "$(( 60 * diskCheckTempInterval ))"
 done
