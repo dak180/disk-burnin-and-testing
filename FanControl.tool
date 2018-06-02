@@ -9,7 +9,7 @@ configFile="${1}"
 
 # Write out a default config file
 function fcConfig {
-	tee > "${configFile}" << EOF
+	tee > "${configFile}" <<"EOF"
 # FanControl config file
 
 # Set this to 0 to enable
