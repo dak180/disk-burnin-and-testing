@@ -128,7 +128,7 @@ function hexConv {
 
 # Round to nearest whole number
 function roundR {
-	bc <<< "scale=0;(${1}+0.5)/1"
+	bc <<< "scale=0;(${1} + 0.5) / 1"
 }
 
 
@@ -142,10 +142,10 @@ function targetTemp {
 # 		Get the current ambent temp readings.
 		ambTemCur="$(ipmiSens "${ambTemIn}")"
 # 		Start adding temps for an average.
-		ambTemOut="$(bc <<< "scale=0;${ambTemOut}+${ambTemCur}")"
+		ambTemOut="$(bc <<< "scale=0;${ambTemOut} + ${ambTemCur}")"
 	done
 # 	Divide by number of sensors for average.
-	ambTemOut="$(bc <<< "scale=3;${ambTemOut}/${#ambTempSens[@]}")"
+	ambTemOut="$(bc <<< "scale=3;${ambTemOut} / ${#ambTempSens[@]}")"
 	ambTemComp="$(roundR "${ambTemOut}")"
 
 # 	Alow the target temp to vary by $ambTempVariance degrees based on
@@ -154,13 +154,13 @@ function targetTemp {
 		echo "${ambTemOut}"
 	else
 		if [ "${ambTemComp}" -gt "${targetDriveTemp}" ]; then
-			if [ "${ambTemComp}" -gt "$(bc <<< "scale=0;${targetDriveTemp}+${ambTempVariance}")" ]; then
-				bc <<< "scale=3;${targetDriveTemp}+${ambTempVariance}"
+			if [ "${ambTemComp}" -gt "$(bc <<< "scale=0;${targetDriveTemp} + ${ambTempVariance}")" ]; then
+				bc <<< "scale=3;${targetDriveTemp} + ${ambTempVariance}"
 				return 0
 			fi
 		elif [ "${targetDriveTemp}" -gt "${ambTemComp}" ]; then
-			if [ "$(bc <<< "scale=0;${targetDriveTemp}-${ambTempVariance}")" -gt "${ambTemComp}" ]; then
-				bc <<< "scale=3;${targetDriveTemp}-${ambTempVariance}"
+			if [ "$(bc <<< "scale=0;${targetDriveTemp} - ${ambTempVariance}")" -gt "${ambTemComp}" ]; then
+				bc <<< "scale=3;${targetDriveTemp} - ${ambTempVariance}"
 				return 0
 			fi
 		fi
@@ -192,7 +192,7 @@ function hdTemp {
 		fi
 	done
 # 	Divide by number of drives for average.
-	hdTempAv="$(bc <<< "scale=3;${hdTempAv}/${#hdName[@]}")"
+	hdTempAv="$(bc <<< "scale=3;${hdTempAv} / ${#hdName[@]}")"
 
 # 	If the hottest drive matches/exceeds the max temp use that instead
 # 	of the average.
@@ -214,7 +214,7 @@ function setFanDuty {
 	local outputFanSet
 	cpuFanSet="$(roundR "${1}")"
 	intakeFanSet="$(roundR "${2}")"
-	outputFanSet="$(bc <<< "scale=0;${intakeFanSet}-${difFanDuty}")"
+	outputFanSet="$(bc <<< "scale=0;${intakeFanSet} - ${difFanDuty}")"
 
 	local count="0"
 	for cpuFan in "${CPU_FAN[@]}"; do
@@ -243,7 +243,7 @@ function proportionalK {
 	local errorK="${1}"
 	local contolOuput
 
-	contolOuput="$(bc <<< "scale=3;${errorK}*${Kp}")"
+	contolOuput="$(bc <<< "scale=3;${errorK} * ${Kp}")"
 	echo "${contolOuput}"
 }
 
@@ -314,7 +314,7 @@ while true; do
 	if [ "$(roundR "${processVar}")" -le "$(roundR "${setPoint}")" ]; then
 		errorK="0"
 	else
-		errorK="$(bc <<< "scale=3;${processVar}-${setPoint}")"
+		errorK="$(bc <<< "scale=3;${processVar} - ${setPoint}")"
 	fi
 
 
@@ -329,7 +329,7 @@ while true; do
 	elif [ "$(roundR "${unQualConrtolOutput}")" -gt "${maxFanDuty}" ]; then
 		qualConrtolOutput="${maxFanDuty}"
 	else
-		qualConrtolOutput="${unQualConrtolOutput}"
+		qualConrtolOutput="$(roundR "${unQualConrtolOutput}")"
 	fi
 
 
