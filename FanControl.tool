@@ -27,11 +27,11 @@ targetDriveTemp="30" # The temperature that we try to maintain.
 maxDriveTemp="39" # Do not let drives get hooter than this.
 ambTempVariance="2" # How many degrees the ambient temperature may effect the target
 
-# Temp sensors
-# The names used by ipmi.
-# cpuTempSens[0]="CPU1 Temp"		# CPU temp	Currently unused
-ambTempSens[0]="MB Temp"		# Ambient temp
-ambTempSens[1]="Card Side Temp"	# Ambient temp
+
+# PID Controls
+Kp="7"	#  Proportional tunable constant
+# Ki="0"	#  Integral tunable constant	Currently unused
+# Kd="40"	#  Derivative tunable constant	Currently unused
 
 # Time interval to check disk temps in mins
 diskCheckTempInterval="5"
@@ -54,6 +54,9 @@ ada3
 )
 
 
+# Everything below this line is MB specific.
+# These examples are for an ASRockRack E3C236D4U.
+
 #
 # Currently unused
 #
@@ -63,6 +66,11 @@ ada3
 # senNamePrefixREAR_FAN="REAR_FAN"
 
 
+# Temp sensors
+# The names used by ipmi.
+# cpuTempSens[0]="CPU1 Temp"		# CPU temp	Currently unused
+ambTempSens[0]="MB Temp"		# Ambient temp
+ambTempSens[1]="Card Side Temp"	# Ambient temp
 
 # IPMI Fan Commands
 #
@@ -97,12 +105,6 @@ function ipmiRead {
 	NIL_FAN[2]="$(hexConv "${rawFanAray[6]}")"
 	NIL_FAN[3]="$(hexConv "${rawFanAray[7]}")"
 }
-
-
-# PID Controls
-Kp="7"	#  Proportional tunable constant
-# Ki="0"	#  Integral tunable constant	Currently unused
-# Kd="40"	#  Derivative tunable constant	Currently unused
 
 EOF
 	exit 0
