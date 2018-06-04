@@ -24,17 +24,17 @@ difFanDuty="10" # The difference maintained between intake and exhaust fans
 
 # Temperatures in Celsius
 targetDriveTemp="30" # The temperature that we try to maintain.
-maxDriveTemp="39" # Do not let drives get hooter than this.
+maxDriveTemp="39" # Do not let drives get hotter than this.
 ambTempVariance="2" # How many degrees the ambient temperature may effect the target
 
 
 # PID Controls
-Kp="7"	#  Proportional tunable constant
-# Ki="0"	#  Integral tunable constant	Currently unused
-# Kd="40"	#  Derivative tunable constant	Currently unused
+Kp="4"	#  Proportional tunable constant
+Ki="0"	#  Integral tunable constant
+Kd="40"	#  Derivative tunable constant
 
 # Time interval to check disk temps in mins
-diskCheckTempInterval="5"
+diskCheckTempInterval="2"
 
 
 # List of HDs
@@ -95,7 +95,7 @@ function ipmiRead {
 	local rawFan
 	local rawFanAray
 	rawFan="$(ipmitool raw 0x3a 0x02 | sed -e 's:^ *::')"
-	read -ra rawFanAray <<< ${rawFan}
+	read -ra rawFanAray <<< "${rawFan}"
 	CPU_FAN[0]="$(hexConv "${rawFanAray[0]}")"
 	NIL_FAN[0]="$(hexConv "${rawFanAray[1]}")"
 	REAR_FAN[0]="$(hexConv "${rawFanAray[2]}")"
@@ -238,6 +238,7 @@ function setFanDuty {
 	done
 }
 
+
 # The proportional calculation
 function proportionalK {
 	local errorK="${1}"
@@ -247,6 +248,25 @@ function proportionalK {
 	echo "${contolOuput}"
 }
 
+# The integral calculation
+function integralK {
+	local errorK="${1}"
+	local prevIntegralVal="${2}"
+	local contolOuput
+
+	contolOuput="$(bc <<< "scale=3;(${Ki} * (${errorK} * ${diskCheckTempInterval} + ${prevIntegralVal})) / 1")"
+	echo "${contolOuput}"
+}
+
+# The derivative calculation
+function derivativeK {
+	local errorK="${1}"
+	local prevErrorK="${prevErrorK}"
+	local contolOuput
+
+	contolOuput="$(bc <<< "scale=3;(${Kd} * (${errorK} - ${prevErrorK})) / ${diskCheckTempInterval}")"
+	echo "${contolOuput}"
+}
 
 #
 # Main Script Starts Here
@@ -300,6 +320,13 @@ fi
 # Get current duty levels.
 ipmiRead
 
+# Initialize previous run vars.
+: "${prevErrorK:="0"}"
+: "${prevProportionalVal:="0"}"
+: "${prevIntegralVal:="0"}"
+: "${prevDerivativeVal:="0"}"
+: "${prevConrtolOutput:="0"}"
+
 
 #
 # Main Loop.
@@ -320,7 +347,10 @@ while true; do
 
 # 	Compute an unqualified control output (P+I+D).
 	proportionalVal="$(proportionalK "${errorK}")"
-	unQualConrtolOutput="$(bc <<< "scale=3;${proportionalVal}+${minFanDuty}")"
+	integralVal="$(integralK "${errorK}" "${prevIntegralVal}")"
+	derivativeVal="$(derivativeK "${errorK}" "${prevErrorK}")"
+
+	unQualConrtolOutput="$(bc <<< "scale=3;${prevConrtolOutput} + ${proportionalVal} + ${integralVal} + ${derivativeVal}")"
 
 
 # 	Qualify the output to ensure we are inside the constraints.
@@ -342,6 +372,14 @@ while true; do
 	if ! ipmiWrite; then
 		exit 1
 	fi
+
+# 	Set vars for next run
+	prevErrorK="${errorK}"
+	prevProportionalVal="${proportionalVal}"
+	prevIntegralVal="${integralVal}"
+	prevDerivativeVal="${derivativeVal}"
+	prevConrtolOutput="${qualConrtolOutput}"
+
 
 	sleep "$(( 60 * diskCheckTempInterval ))"
 done
