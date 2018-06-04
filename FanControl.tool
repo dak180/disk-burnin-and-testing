@@ -263,13 +263,13 @@ fi
 . "${configFile}"
 
 # Check if needed software is installed.
+PATH="${PATH}:/usr/local/sbin:/usr/local/bin"
 commands=(
 grep
-awk
 sed
-tr
 cut
 sleep
+bc
 smartctl
 ipmitool
 )
