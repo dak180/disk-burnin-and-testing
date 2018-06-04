@@ -159,7 +159,7 @@ function targetTemp {
 				return 0
 			fi
 		elif [ "${targetDriveTemp}" -gt "${ambTemComp}" ]; then
-			if [ "$(bc <<< "scale=0;${targetDriveTemp}-${ambTempVariance}")" -gt "${ambTemOut}" ]; then
+			if [ "$(bc <<< "scale=0;${targetDriveTemp}-${ambTempVariance}")" -gt "${ambTemComp}" ]; then
 				bc <<< "scale=3;${targetDriveTemp}-${ambTempVariance}"
 				return 0
 			fi
@@ -311,7 +311,7 @@ while true; do
 	processVar="$(hdTemp)"
 
 # 	Get the error or set to 0 (we only cool, we do not heat).
-	if [ "$(roundR "${processVar}")" -le "${setPoint}" ]; then
+	if [ "$(roundR "${processVar}")" -le "$(roundR "${setPoint}")" ]; then
 		errorK="0"
 	else
 		errorK="$(bc <<< "scale=3;${processVar}-${setPoint}")"
@@ -320,7 +320,7 @@ while true; do
 
 # 	Compute an unqualified control output (P+I+D).
 	proportionalVal="$(proportionalK "${errorK}")"
-	unQualConrtolOutput="$(( proportionalVal + minFanDuty ))"
+	unQualConrtolOutput="$(bc <<< "scale=3;${proportionalVal}+${minFanDuty}")"
 
 
 # 	Qualify the output to ensure we are inside the constraints.
