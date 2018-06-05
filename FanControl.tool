@@ -31,7 +31,7 @@ ambTempVariance="2" # How many degrees the ambient temperature may effect the ta
 # PID Controls
 Kp="4"	#  Proportional tunable constant
 Ki="0"	#  Integral tunable constant
-Kd="40"	#  Derivative tunable constant
+Kd="16"	#  Derivative tunable constant
 
 # Time interval to check disk temps in mins
 diskCheckTempInterval="2"
