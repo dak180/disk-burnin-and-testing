@@ -252,9 +252,11 @@ function proportionalK {
 function integralK {
 	local errorK="${1}"
 	local prevIntegralVal="${2}"
+	local controlStep
 	local controlOuput
 
-	controlOuput="$(bc <<< "scale=3;(${Ki} * (${errorK} * ${diskCheckTempInterval} + ${prevIntegralVal})) / 1")"
+	controlStep="$(bc <<< "scale=3;(${errorK} * ${diskCheckTempInterval}) + ${prevIntegralVal}")"
+	controlOuput="$(bc <<< "scale=3;(${Ki} * ${controlStep}) / 1")"
 	echo "${controlOuput}"
 }
 
@@ -264,7 +266,7 @@ function derivativeK {
 	local prevErrorK="${prevErrorK}"
 	local controlOuput
 
-	controlOuput="$(bc <<< "scale=3;(${Kd} * (${errorK} - ${prevErrorK})) / ${diskCheckTempInterval}")"
+	controlOuput="$(bc <<< "scale=3;${Kd} * ((${errorK} - ${prevErrorK}) / ${diskCheckTempInterval})")"
 	echo "${controlOuput}"
 }
 
