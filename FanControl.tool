@@ -242,30 +242,30 @@ function setFanDuty {
 # The proportional calculation
 function proportionalK {
 	local errorK="${1}"
-	local contolOuput
+	local controlOuput
 
-	contolOuput="$(bc <<< "scale=3;${errorK} * ${Kp}")"
-	echo "${contolOuput}"
+	controlOuput="$(bc <<< "scale=3;${errorK} * ${Kp}")"
+	echo "${controlOuput}"
 }
 
 # The integral calculation
 function integralK {
 	local errorK="${1}"
 	local prevIntegralVal="${2}"
-	local contolOuput
+	local controlOuput
 
-	contolOuput="$(bc <<< "scale=3;(${Ki} * (${errorK} * ${diskCheckTempInterval} + ${prevIntegralVal})) / 1")"
-	echo "${contolOuput}"
+	controlOuput="$(bc <<< "scale=3;(${Ki} * (${errorK} * ${diskCheckTempInterval} + ${prevIntegralVal})) / 1")"
+	echo "${controlOuput}"
 }
 
 # The derivative calculation
 function derivativeK {
 	local errorK="${1}"
 	local prevErrorK="${prevErrorK}"
-	local contolOuput
+	local controlOuput
 
-	contolOuput="$(bc <<< "scale=3;(${Kd} * (${errorK} - ${prevErrorK})) / ${diskCheckTempInterval}")"
-	echo "${contolOuput}"
+	controlOuput="$(bc <<< "scale=3;(${Kd} * (${errorK} - ${prevErrorK})) / ${diskCheckTempInterval}")"
+	echo "${controlOuput}"
 }
 
 #
@@ -325,7 +325,7 @@ ipmiRead
 : "${prevProportionalVal:="0"}"
 : "${prevIntegralVal:="0"}"
 : "${prevDerivativeVal:="0"}"
-: "${prevConrtolOutput:="0"}"
+: "${prevControlOutput:="0"}"
 
 
 #
@@ -346,25 +346,25 @@ while true; do
 	integralVal="$(integralK "${errorK}" "${prevIntegralVal}")"
 	derivativeVal="$(derivativeK "${errorK}" "${prevErrorK}")"
 
-	unQualConrtolOutput="$(bc <<< "scale=3;${prevConrtolOutput} + ${proportionalVal} + ${integralVal} + ${derivativeVal}")"
+	unQualControlOutput="$(bc <<< "scale=3;${prevControlOutput} + ${proportionalVal} + ${integralVal} + ${derivativeVal}")"
 
 
 # 	Qualify the output to ensure we are inside the constraints.
 	qualMinFanDuty="$(bc <<< "${minFanDuty} + ${difFanDuty}")"
 	qualMinFanDuty="$(roundR "${qualMinFanDuty}")"
-	qualConrtolOutput="$(roundR "${unQualConrtolOutput}")"
+	qualControlOutput="$(roundR "${unQualControlOutput}")"
 
-	if [ "${qualConrtolOutput}" -lt "${qualMinFanDuty}" ]; then
-		qualConrtolOutput="${qualMinFanDuty}"
-	elif [ "${qualConrtolOutput}" -gt "${maxFanDuty}" ]; then
-		qualConrtolOutput="${maxFanDuty}"
+	if [ "${qualControlOutput}" -lt "${qualMinFanDuty}" ]; then
+		qualControlOutput="${qualMinFanDuty}"
+	elif [ "${qualControlOutput}" -gt "${maxFanDuty}" ]; then
+		qualControlOutput="${maxFanDuty}"
 	fi
 
 
 # 	We only need to set the fans if something changes.
-	if [ ! "${prevConrtolOutput}" = "${qualConrtolOutput}" ]; then
+	if [ ! "${prevControlOutput}" = "${qualControlOutput}" ]; then
 # 		Set the duty levels for each fan type.
-		setFanDuty "${autoFanDuty}" "${qualConrtolOutput}"
+		setFanDuty "${autoFanDuty}" "${qualControlOutput}"
 
 
 # 		Write out the new duty levels to ipmi.
@@ -379,7 +379,7 @@ while true; do
 	prevProportionalVal="${proportionalVal}"
 	prevIntegralVal="${integralVal}"
 	prevDerivativeVal="${derivativeVal}"
-	prevConrtolOutput="${qualConrtolOutput}"
+	prevControlOutput="${qualControlOutput}"
 
 
 	sleep "$(( 60 * diskCheckTempInterval ))"
