@@ -337,12 +337,8 @@ while true; do
 	setPoint="$(targetTemp)"
 	processVar="$(hdTemp)"
 
-# 	Get the error or set to 0 (we only cool, we do not heat).
-	if [ "$(roundR "${processVar}")" -le "$(roundR "${setPoint}")" ]; then
-		errorK="0"
-	else
-		errorK="$(bc <<< "scale=3;${processVar} - ${setPoint}")"
-	fi
+# 	Get the error.
+	errorK="$(bc <<< "scale=3;${processVar} - ${setPoint}")"
 
 
 # 	Compute an unqualified control output (P+I+D).
@@ -354,23 +350,28 @@ while true; do
 
 
 # 	Qualify the output to ensure we are inside the constraints.
-	if [ "$(roundR "${unQualConrtolOutput}")" -lt "${minFanDuty}" ]; then
-		qualConrtolOutput="${minFanDuty}"
-	elif [ "$(roundR "${unQualConrtolOutput}")" -gt "${maxFanDuty}" ]; then
+	qualMinFanDuty="$(bc <<< "${minFanDuty} + ${difFanDuty}")"
+	qualMinFanDuty="$(roundR "${qualMinFanDuty}")"
+	qualConrtolOutput="$(roundR "${unQualConrtolOutput}")"
+
+	if [ "${qualConrtolOutput}" -lt "${qualMinFanDuty}" ]; then
+		qualConrtolOutput="${qualMinFanDuty}"
+	elif [ "${qualConrtolOutput}" -gt "${maxFanDuty}" ]; then
 		qualConrtolOutput="${maxFanDuty}"
-	else
-		qualConrtolOutput="$(roundR "${unQualConrtolOutput}")"
 	fi
 
 
-# 	Set the duty levels for each fan type.
-	setFanDuty "${autoFanDuty}" "${qualConrtolOutput}"
+# 	We only need to set the fans if something changes.
+	if [ ! "${prevConrtolOutput}" = "${qualConrtolOutput}" ]; then
+# 		Set the duty levels for each fan type.
+		setFanDuty "${autoFanDuty}" "${qualConrtolOutput}"
 
 
-# 	Write out the new duty levels to ipmi.
-# 	shellcheck disable=SC2086
-	if ! ipmiWrite; then
-		exit 1
+# 		Write out the new duty levels to ipmi.
+# 		shellcheck disable=SC2086
+		if ! ipmiWrite; then
+			exit 1
+		fi
 	fi
 
 # 	Set vars for next run
