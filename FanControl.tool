@@ -27,6 +27,10 @@ targetDriveTemp="30" # The temperature that we try to maintain.
 maxDriveTemp="39" # Do not let drives get hotter than this.
 ambTempVariance="2" # How many degrees the ambient temperature may effect the target
 
+# CPU settings
+targetCPUTemp="35" # The temperature that we try to maintain.
+maxCPUTemp="55" # Do not let the CPU get hotter than this.
+cpuCheckTempInterval="2" # In seconds.
 
 # PID Controls
 Kp="4"	#  Proportional tunable constant
@@ -129,6 +133,42 @@ function hexConv {
 # Round to nearest whole number
 function roundR {
 	bc <<< "scale=0;(${1} + 0.5) / 1"
+}
+
+
+# Get average or high CPU temperature.
+function cpuTemp {
+	local numberCPU="${1}"
+	local numberCPUAray
+	local coreCPU
+	local cpuTempCur
+	local cpuTempAv="0"
+	local cpuTempMx="0"
+	read -ra numberCPUAray <<< "$(seq 0 ${numberCPU})"
+
+	for coreCPU in ${numberCPUAray}; do
+		cpuTempCur="$(sysctl -n dev.cpu.${coreCPU}.temperature | sed -e 's:C::)"
+
+# 		Start adding temps for an average.
+		cpuTempAv="$(bc <<< "scale=3;${cpuTempCur} + ${cpuTempAv}")"
+
+# 		Keep track of the highest current temp
+		if [ "$(roundR "${hdTempMx}")" -gt "$(roundR "${hdTempCur}")" ]; then
+			hdTempMx="${hdTempMx}"
+		else
+			hdTempMx="${hdTempCur}"
+		fi
+	done
+# 	Divide by number of CPUs for average.
+	hdTempAv="$(bc <<< "scale=3;${hdTempAv} / ${#hdName[@]}")"
+
+# 	If the hottest CPU matches/exceeds the max temp use that
+# 	instead of the average.
+	if [ "${cpuTempMx}" -gt "${cpuTempCur}" ]; then
+		hdTempMx="${cpuTempMx}"
+	else
+		hdTempMx="${cpuTempCur}"
+	fi
 }
 
 
@@ -296,6 +336,7 @@ sleep
 bc
 smartctl
 ipmitool
+sysctl
 )
 for command in "${commands[@]}"; do
 	if ! type "${command}" &> /dev/null; then
@@ -321,6 +362,9 @@ fi
 
 # Get current duty levels.
 ipmiRead
+
+# Get number of CPUs
+numberCPU="$(bc <<< $(sysctl -n hw.ncpu) - 1)"
 
 # Initialize previous run vars.
 : "${prevErrorK:="0"}"
