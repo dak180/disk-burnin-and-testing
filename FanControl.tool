@@ -310,6 +310,7 @@ function derivativeK {
 	echo "${controlOuput}"
 }
 
+
 #
 # Main Script Starts Here
 #
@@ -362,6 +363,17 @@ fi
 
 # Get current duty levels.
 ipmiRead
+
+# Start fans at max
+# CPU_FAN[0]="100"
+REAR_FAN[0]="100"
+FRNT_FAN[0]="100"
+FRNT_FAN[1]="100"
+
+if ! ipmiWrite; then
+	exit 1
+fi
+
 
 # Get number of CPUs
 numberCPU="$(bc <<< $(sysctl -n hw.ncpu) - 1)"
