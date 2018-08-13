@@ -28,9 +28,10 @@ maxDriveTemp="39" # Do not let drives get hotter than this.
 ambTempVariance="2" # How many degrees the ambient temperature may effect the target
 
 # CPU settings
-targetCPUTemp="35" # The temperature that we try to maintain.
-maxCPUTemp="55" # Do not let the CPU get hotter than this.
-cpuCheckTempInterval="2" # In seconds.
+# Currently unused
+# targetCPUTemp="35" # The temperature that we try to maintain.
+# maxCPUTemp="55" # Do not let the CPU get hotter than this.
+# cpuCheckTempInterval="2" # In seconds.
 
 # PID Controls
 Kp="4"	#  Proportional tunable constant
