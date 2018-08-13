@@ -33,6 +33,11 @@ ambTempVariance="2" # How many degrees the ambient temperature may effect the ta
 # maxCPUTemp="55" # Do not let the CPU get hotter than this.
 # cpuCheckTempInterval="2" # In seconds.
 
+# HBA Settings
+targetHBATemp="40" # The temperature that we try to maintain.
+maxHBATemp="55" # Do not let the HBA get hotter than this.
+
+
 # PID Controls
 Kp="4"	#  Proportional tunable constant
 Ki="0"	#  Integral tunable constant
@@ -74,13 +79,15 @@ ada3
 # Temp sensors
 # The names used by ipmi.
 # cpuTempSens[0]="CPU1 Temp"		# CPU temp	Currently unused
+hbaTempSens[0]="TR1 Temp"		# HBA temp
 ambTempSens[0]="MB Temp"		# Ambient temp
 ambTempSens[1]="Card Side Temp"	# Ambient temp
 
 # IPMI Fan Commands
 #
-# The script curently tracks four different types of fan values:
+# The script curently tracks five different types of fan values:
 # CPU_FAN is used for fans that directly cool the cpu.
+# HBA_FAN is used for fans that directly cool a HBA card.
 # FRNT_FAN is used for intake fans.
 # REAR_FAN is used for exhaust fans.
 # NIL_FAN is used for space holder values that are not fans.
@@ -89,7 +96,7 @@ ambTempSens[1]="Card Side Temp"	# Ambient temp
 
 # The command to set the desired fan duty levels.
 function ipmiWrite {
-	if ! ipmitool raw 0x3a 0x01 "${CPU_FAN[0]}" "${NIL_FAN[0]}" "${REAR_FAN[0]}" "${NIL_FAN[1]}" "${FRNT_FAN[0]}" "${FRNT_FAN[1]}" "${NIL_FAN[2]}" "${NIL_FAN[3]}"; then
+	if ! ipmitool raw 0x3a 0x01 "${CPU_FAN[0]}" "${NIL_FAN[0]}" "${REAR_FAN[0]}" "${NIL_FAN[1]}" "${FRNT_FAN[0]}" "${FRNT_FAN[1]}" "${HBA_FAN[0]}" "${NIL_FAN[2]}"; then
 		return ${?}
 	fi
 }
@@ -107,8 +114,8 @@ function ipmiRead {
 	NIL_FAN[1]="$(hexConv "${rawFanAray[3]}")"
 	FRNT_FAN[0]="$(hexConv "${rawFanAray[4]}")"
 	FRNT_FAN[1]="$(hexConv "${rawFanAray[5]}")"
-	NIL_FAN[2]="$(hexConv "${rawFanAray[6]}")"
-	NIL_FAN[3]="$(hexConv "${rawFanAray[7]}")"
+	HBA_FAN[0]="$(hexConv "${rawFanAray[6]}")"
+	NIL_FAN[2]="$(hexConv "${rawFanAray[7]}")"
 }
 
 EOF
@@ -248,19 +255,29 @@ function hdTemp {
 # Set fan duty levels
 function setFanDuty {
 	local cpuFan
+	local hbaFan
 	local intakeFan
 	local outputFan
 	local cpuFanSet
+	local hbaFanSet
 	local intakeFanSet
 	local outputFanSet
 	cpuFanSet="$(roundR "${1}")"
-	intakeFanSet="$(roundR "${2}")"
+	hbaFanSet="$(roundR "${2}")"
+	intakeFanSet="$(roundR "${3}")"
 	outputFanSet="$(bc <<< "scale=0;${intakeFanSet} - ${difFanDuty}")"
 
 	local count="0"
 	for cpuFan in "${CPU_FAN[@]}"; do
 		: "${cpuFan}"
 		CPU_FAN[${count}]="${cpuFanSet}"
+		((count++))
+	done
+
+	count="0"
+	for hbaFan in "${HBA_FAN[@]}"; do
+		: "${hbaFan}"
+		HBA_FAN[${count}]="${hbaFanSet}"
 		((count++))
 	done
 
@@ -366,10 +383,7 @@ fi
 ipmiRead
 
 # Start fans at max
-# CPU_FAN[0]="100"
-REAR_FAN[0]="100"
-FRNT_FAN[0]="100"
-FRNT_FAN[1]="100"
+setFanDuty "100" "100" "100"
 
 if ! ipmiWrite; then
 	exit 1
@@ -386,6 +400,12 @@ numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 : "${prevHDDerivativeVal:="0"}"
 : "${prevHDControlOutput:="0"}"
 
+: "${prevHBAErrorK:="0"}"
+: "${prevHBAProportionalVal:="0"}"
+: "${prevHBAIntegralVal:="0"}"
+: "${prevHBADerivativeVal:="0"}"
+: "${prevHBAControlOutput:="0"}"
+
 
 #
 # Main Loop.
@@ -393,12 +413,13 @@ numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 
 
 while true; do
+# 	Calculate HD fan settings
+#
 	HDsetPoint="$(targetTemp)"
 	HDprocessVar="$(hdTemp)"
 
 # 	Get the error.
 	HDerrorK="$(bc <<< "scale=3;${HDprocessVar} - ${HDsetPoint}")"
-
 
 # 	Compute an unqualified control output (P+I+D).
 	HDproportionalVal="$(proportionalK "${HDerrorK}")"
@@ -406,7 +427,6 @@ while true; do
 	HDderivativeVal="$(derivativeK "${HDerrorK}" "${prevHDErrorK}")"
 
 	unQualHDControlOutput="$(bc <<< "scale=3;${prevHDControlOutput} + ${HDproportionalVal} + ${HDintegralVal} + ${HDderivativeVal}")"
-
 
 # 	Qualify the output to ensure we are inside the constraints.
 	qualHDMinFanDuty="$(bc <<< "${minFanDuty} + ${difFanDuty}")"
@@ -420,10 +440,36 @@ while true; do
 	fi
 
 
+# 	Calculate HBA fan settings
+#
+	HBAsetPoint="${targetHBATemp}"
+	HBAprocessVar="$(ipmiSens "${hbaTempSens[0]}")"
+
+# 	Get the error.
+	HBAerrorK="$(bc <<< "scale=3;${HBAprocessVar} - ${HBAsetPoint}")"
+
+# 	Compute an unqualified control output (P+I+D).
+	HBAproportionalVal="$(proportionalK "${HBAerrorK}")"
+	HBAintegralVal="$(integralK "${HBAerrorK}" "${prevHBAIntegralVal}")"
+	HBAderivativeVal="$(derivativeK "${HBAerrorK}" "${prevHBAErrorK}")"
+
+	unQualHBAControlOutput="$(bc <<< "scale=3;${prevHBAControlOutput} + ${HBAproportionalVal} + ${HBAintegralVal} + ${HBAderivativeVal}")"
+
+# 	Qualify the output to ensure we are inside the constraints.
+	qualHBAMinFanDuty="$(roundR "${minFanDuty}")"
+	qualHBAControlOutput="$(roundR "${unQualHBAControlOutput}")"
+
+	if [ "${qualHBAControlOutput}" -lt "${qualHBAMinFanDuty}" ]; then
+		qualHBAControlOutput="${qualHBAMinFanDuty}"
+	elif [ "${qualHBAControlOutput}" -gt "${maxFanDuty}" ]; then
+		qualHBAControlOutput="${maxFanDuty}"
+	fi
+
+
 # 	We only need to set the fans if something changes.
-	if [ ! "${prevHDControlOutput}" = "${qualHDControlOutput}" ]; then
+	if [ ! "${prevHDControlOutput}" = "${qualHDControlOutput}" ] || [! "${prevHBAControlOutput}" = "${qualHBAControlOutput}" ]; then
 # 		Set the duty levels for each fan type.
-		setFanDuty "${autoFanDuty}" "${qualHDControlOutput}"
+		setFanDuty "${autoFanDuty}" "${qualHBAControlOutput}" "${qualHDControlOutput}"
 
 
 # 		Write out the new duty levels to ipmi.
@@ -439,6 +485,12 @@ while true; do
 	prevHDIntegralVal="${HDintegralVal}"
 	prevHDDerivativeVal="${HDderivativeVal}"
 	prevHDControlOutput="${qualHDControlOutput}"
+
+	prevHBAErrorK="${HBAerrorK}"
+	prevHBAProportionalVal="${HBAproportionalVal}"
+	prevHBAIntegralVal="${HBAintegralVal}"
+	prevHBADerivativeVal="${HBAderivativeVal}"
+	prevHBAControlOutput="${qualHBAControlOutput}"
 
 
 	sleep "$(( 60 * diskCheckTempInterval ))"
