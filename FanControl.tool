@@ -321,7 +321,7 @@ function integralK {
 # The derivative calculation
 function derivativeK {
 	local errorK="${1}"
-	local prevErrorK="${prevErrorK}"
+	local prevErrorK="${2}"
 	local controlOuput
 
 	controlOuput="$(bc <<< "scale=3;${Kd} * ((${errorK} - ${prevErrorK}) / ${diskCheckTempInterval})")"
@@ -398,13 +398,13 @@ numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 : "${prevHDProportionalVal:="0"}"
 : "${prevHDIntegralVal:="0"}"
 : "${prevHDDerivativeVal:="0"}"
-: "${prevHDControlOutput:="0"}"
+: "${prevHDControlOutput:="100"}"
 
 : "${prevHBAErrorK:="0"}"
 : "${prevHBAProportionalVal:="0"}"
 : "${prevHBAIntegralVal:="0"}"
 : "${prevHBADerivativeVal:="0"}"
-: "${prevHBAControlOutput:="0"}"
+: "${prevHBAControlOutput:="100"}"
 
 
 #
@@ -467,7 +467,7 @@ while true; do
 
 
 # 	We only need to set the fans if something changes.
-	if [ ! "${prevHDControlOutput}" = "${qualHDControlOutput}" ] || [! "${prevHBAControlOutput}" = "${qualHBAControlOutput}" ]; then
+	if [ ! "${prevHDControlOutput}" = "${qualHDControlOutput}" ] || [ ! "${prevHBAControlOutput}" = "${qualHBAControlOutput}" ]; then
 # 		Set the duty levels for each fan type.
 		setFanDuty "${autoFanDuty}" "${qualHBAControlOutput}" "${qualHDControlOutput}"
 
