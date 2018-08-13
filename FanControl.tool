@@ -380,11 +380,11 @@ fi
 numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 
 # Initialize previous run vars.
-: "${prevErrorK:="0"}"
-: "${prevProportionalVal:="0"}"
-: "${prevIntegralVal:="0"}"
-: "${prevDerivativeVal:="0"}"
-: "${prevControlOutput:="0"}"
+: "${prevHDErrorK:="0"}"
+: "${prevHDProportionalVal:="0"}"
+: "${prevHDIntegralVal:="0"}"
+: "${prevHDDerivativeVal:="0"}"
+: "${prevHDControlOutput:="0"}"
 
 
 #
@@ -393,37 +393,37 @@ numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 
 
 while true; do
-	setPoint="$(targetTemp)"
-	processVar="$(hdTemp)"
+	HDsetPoint="$(targetTemp)"
+	HDprocessVar="$(hdTemp)"
 
 # 	Get the error.
-	errorK="$(bc <<< "scale=3;${processVar} - ${setPoint}")"
+	HDerrorK="$(bc <<< "scale=3;${HDprocessVar} - ${HDsetPoint}")"
 
 
 # 	Compute an unqualified control output (P+I+D).
-	proportionalVal="$(proportionalK "${errorK}")"
-	integralVal="$(integralK "${errorK}" "${prevIntegralVal}")"
-	derivativeVal="$(derivativeK "${errorK}" "${prevErrorK}")"
+	HDproportionalVal="$(proportionalK "${HDerrorK}")"
+	HDintegralVal="$(integralK "${HDerrorK}" "${prevHDIntegralVal}")"
+	HDderivativeVal="$(derivativeK "${HDerrorK}" "${prevHDErrorK}")"
 
-	unQualControlOutput="$(bc <<< "scale=3;${prevControlOutput} + ${proportionalVal} + ${integralVal} + ${derivativeVal}")"
+	unQualHDControlOutput="$(bc <<< "scale=3;${prevHDControlOutput} + ${HDproportionalVal} + ${HDintegralVal} + ${HDderivativeVal}")"
 
 
 # 	Qualify the output to ensure we are inside the constraints.
-	qualMinFanDuty="$(bc <<< "${minFanDuty} + ${difFanDuty}")"
-	qualMinFanDuty="$(roundR "${qualMinFanDuty}")"
-	qualControlOutput="$(roundR "${unQualControlOutput}")"
+	qualHDMinFanDuty="$(bc <<< "${minFanDuty} + ${difFanDuty}")"
+	qualHDMinFanDuty="$(roundR "${qualHDMinFanDuty}")"
+	qualHDControlOutput="$(roundR "${unQualHDControlOutput}")"
 
-	if [ "${qualControlOutput}" -lt "${qualMinFanDuty}" ]; then
-		qualControlOutput="${qualMinFanDuty}"
-	elif [ "${qualControlOutput}" -gt "${maxFanDuty}" ]; then
-		qualControlOutput="${maxFanDuty}"
+	if [ "${qualHDControlOutput}" -lt "${qualHDMinFanDuty}" ]; then
+		qualHDControlOutput="${qualHDMinFanDuty}"
+	elif [ "${qualHDControlOutput}" -gt "${maxFanDuty}" ]; then
+		qualHDControlOutput="${maxFanDuty}"
 	fi
 
 
 # 	We only need to set the fans if something changes.
-	if [ ! "${prevControlOutput}" = "${qualControlOutput}" ]; then
+	if [ ! "${prevHDControlOutput}" = "${qualHDControlOutput}" ]; then
 # 		Set the duty levels for each fan type.
-		setFanDuty "${autoFanDuty}" "${qualControlOutput}"
+		setFanDuty "${autoFanDuty}" "${qualHDControlOutput}"
 
 
 # 		Write out the new duty levels to ipmi.
@@ -434,11 +434,11 @@ while true; do
 	fi
 
 # 	Set vars for next run
-	prevErrorK="${errorK}"
-	prevProportionalVal="${proportionalVal}"
-	prevIntegralVal="${integralVal}"
-	prevDerivativeVal="${derivativeVal}"
-	prevControlOutput="${qualControlOutput}"
+	prevHDErrorK="${HDerrorK}"
+	prevHDProportionalVal="${HDproportionalVal}"
+	prevHDIntegralVal="${HDintegralVal}"
+	prevHDDerivativeVal="${HDderivativeVal}"
+	prevHDControlOutput="${qualHDControlOutput}"
 
 
 	sleep "$(( 60 * diskCheckTempInterval ))"
