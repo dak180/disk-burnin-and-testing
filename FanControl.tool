@@ -144,10 +144,10 @@ function cpuTemp {
 	local cpuTempCur
 	local cpuTempAv="0"
 	local cpuTempMx="0"
-	read -ra numberCPUAray <<< "$(seq 0 ${numberCPU})"
+	read -ra numberCPUAray <<< "$(seq "0 ${numberCPU}")"
 
 	for coreCPU in ${numberCPUAray}; do
-		cpuTempCur="$(sysctl -n dev.cpu.${coreCPU}.temperature | sed -e 's:C::)"
+		cpuTempCur="$(sysctl -n "dev.cpu.${coreCPU}.temperature" | sed -e 's:C::')"
 
 # 		Start adding temps for an average.
 		cpuTempAv="$(bc <<< "scale=3;${cpuTempCur} + ${cpuTempAv}")"
@@ -376,7 +376,7 @@ fi
 
 
 # Get number of CPUs
-numberCPU="$(bc <<< $(sysctl -n hw.ncpu) - 1)"
+numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 
 # Initialize previous run vars.
 : "${prevErrorK:="0"}"
