@@ -34,13 +34,13 @@ ambTempVariance="2" # How many degrees the ambient temperature may effect the ta
 # cpuCheckTempInterval="2" # In seconds.
 
 # HBA Settings
-targetHBATemp="40" # The temperature that we try to maintain.
-maxHBATemp="55" # Do not let the HBA get hotter than this.
+targetHBATemp="41" # The temperature that we try to maintain.
+# maxHBATemp="55" # Do not let the HBA get hotter than this.	Currently unused
 
 
 # PID Controls
 Kp="4"	#  Proportional tunable constant
-Ki="0"	#  Integral tunable constant
+Ki="0.040"	#  Integral tunable constant
 Kd="16"	#  Derivative tunable constant
 
 # Time interval to check disk temps in mins
