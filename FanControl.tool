@@ -267,32 +267,20 @@ function setFanDuty {
 	intakeFanSet="$(roundR "${3}")"
 	outputFanSet="$(bc <<< "scale=0;${intakeFanSet} - ${difFanDuty}")"
 
-	local count="0"
-	for cpuFan in "${CPU_FAN[@]}"; do
-		: "${cpuFan}"
-		CPU_FAN[${count}]="${cpuFanSet}"
-		((count++))
+	for cpuFan in "${!CPU_FAN[@]}"; do
+		CPU_FAN[${cpuFan}]="${cpuFanSet}"
 	done
 
-	count="0"
-	for hbaFan in "${HBA_FAN[@]}"; do
-		: "${hbaFan}"
-		HBA_FAN[${count}]="${hbaFanSet}"
-		((count++))
+	for intakeFan in "${!FRNT_FAN[@]}"; do
+		FRNT_FAN[${intakeFan}]="${intakeFanSet}"
 	done
 
-	count="0"
-	for intakeFan in "${FRNT_FAN[@]}"; do
-		: "${intakeFan}"
-		FRNT_FAN[${count}]="${intakeFanSet}"
-		((count++))
+	for outputFan in "${!REAR_FAN[@]}"; do
+		REAR_FAN[${outputFan}]="${outputFanSet}"
 	done
 
-	count="0"
-	for outputFan in "${REAR_FAN[@]}"; do
-		: "${outputFan}"
-		REAR_FAN[${count}]="${outputFanSet}"
-		((count++))
+	for hbaFan in "${!HBA_FAN[@]}"; do
+		HBA_FAN[${hbaFan}]="${hbaFanSet}"
 	done
 }
 
