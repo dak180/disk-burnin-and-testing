@@ -372,7 +372,12 @@ if [ ! "${defaultFile}" = "0" ]; then
 fi
 
 # Set fans to auto on exit
-# trap 'ipmitool raw 0x3a 0x01 ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty} ${autoFanDuty}' 0 1 2 3 6
+function scExit {
+	setFanDuty "0" "0" "0"
+	exit 1
+}
+
+trap 'scExit' EXIT
 
 
 #
