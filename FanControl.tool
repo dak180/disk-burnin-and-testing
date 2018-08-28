@@ -5,8 +5,6 @@
 #
 # ipmitool raw 0x3a 0x01  ${CPU_FAN1} ${Reserved} ${REAR_FAN1} ${REAR_FAN2} ${FRNT_FAN1} ${FRNT_FAN2} ${FRNT_FAN3} ${Reserved}
 
-configFile="${1}"
-
 # Write out a default config file
 function fcConfig {
 	tee > "${configFile}" <<"EOF"
@@ -114,8 +112,10 @@ function ipmiRead {
 	NIL_FAN[1]="$(hexConv "${rawFanAray[3]}")"
 	FRNT_FAN[0]="$(hexConv "${rawFanAray[4]}")"
 	FRNT_FAN[1]="$(hexConv "${rawFanAray[5]}")"
-	HBA_FAN[0]="$(hexConv "${rawFanAray[6]}")"
+	FRNT_FAN[2]="$(hexConv "${rawFanAray[6]}")"
 	NIL_FAN[2]="$(hexConv "${rawFanAray[7]}")"
+
+	HBA_FAN[0]="${FRNT_FAN[2]}"
 }
 
 EOF
@@ -252,6 +252,76 @@ function hdTemp {
 }
 
 
+# Print temp info
+function infoTemps {
+	local hdNum
+	local hdTempCur
+	local hdTempAv="0"
+
+	echo -e "Current HD setpoint temp:\t$(targetTemp)°C\n\n"
+	if [ ! -z "${hbaTempSens[0]}" ]; then
+		echo -e "HBA Temp:\t$(ipmiSens "${hbaTempSens[0]}")°C"
+	fi
+
+	for hdNum in "${hdName[@]}"; do
+# 		Get the temp for the current drive.
+# 		194 is the standard SMART id for temp so we look for it at the
+# 		begining of the line.
+		hdTempCur="$(smartctl -a "/dev/${hdNum}" | grep "^194" | sed -E 's:[[:space:]]+: :g' | cut -d ' ' -f 10)"
+# 		Start adding temps for an average.
+		hdTempAv="$(( hdTempAv + hdTempCur ))"
+
+# 		Echo HD's current temp
+		echo -e "${hdNum} Temp:\t${hdTempCur}°C"
+	done
+# 	Divide by number of drives for average.
+	hdTempAv="$(bc <<< "scale=3;${hdTempAv} / ${#hdName[@]}")"
+
+	echo -e "\n\nAverage HD Temp: ${hdTempAv}°C"
+}
+
+
+# Print fan info
+# shellcheck disable=SC2086
+function infoFans {
+	ipmiRead
+	local cpuFan
+	local intakeFan
+	local outputFan
+	local countd
+
+	for cpuFan in "${!CPU_FAN[@]}"; do
+		countd=$((cpuFan+1))
+		if [ "${CPU_FAN[${cpuFan}]}" = "0" ]; then
+			CPU_FAN[${cpuFan}]="auto"
+		else
+			CPU_FAN[${cpuFan}]="${CPU_FAN[${cpuFan}]}%"
+		fi
+		echo -e "CPU_FAN${countd}\t${CPU_FAN[${cpuFan}]}\t$(ipmiSens "CPU_FAN${countd}") rpm"
+	done
+
+	for intakeFan in "${!FRNT_FAN[@]}"; do
+		countd=$((intakeFan+1))
+		if [ "${FRNT_FAN[${intakeFan}]}" = "0" ]; then
+			FRNT_FAN[${intakeFan}]="auto"
+		else
+			FRNT_FAN[${intakeFan}]="${FRNT_FAN[${intakeFan}]}%"
+		fi
+		echo -e "FRNT_FAN${countd}\t${FRNT_FAN[${intakeFan}]}\t$(ipmiSens "FRNT_FAN${countd}") rpm"
+	done
+
+	for outputFan in "${!REAR_FAN[@]}"; do
+		countd=$((outputFan+1))
+		if [ "${REAR_FAN[${outputFan}]}" = "0" ]; then
+			REAR_FAN[${outputFan}]="auto"
+		else
+			REAR_FAN[${outputFan}]="${REAR_FAN[${outputFan}]}%"
+		fi
+		echo -e "REAR_FAN${countd}\t${REAR_FAN[${outputFan}]}\t$(ipmiSens "REAR_FAN${countd}") rpm"
+	done
+}
+
+
 # Set fan duty levels
 function setFanDuty {
 	local cpuFan
@@ -321,6 +391,27 @@ function derivativeK {
 # Main Script Starts Here
 #
 
+while getopts ":c:tfd" OPTION; do
+	case "${OPTION}" in
+		c)
+			configFile="${OPTARG}"
+		;;
+		t)
+			scAction="temps"
+		;;
+		f)
+			scAction="fans"
+		;;
+		d)
+			scAction="daemon"
+		;;
+		?)
+			# If an unknown flag is used (or -?):
+			echo "${0} {-c configFile} {-t|-f|-d}" >&2
+			exit 1
+		;;
+	esac
+done
 
 if [ -z "${configFile}" ]; then
 	echo "Please specify a config file location." >&2
@@ -358,6 +449,32 @@ if [ ! "${defaultFile}" = "0" ]; then
 	echo "Please edit the config file for your setup" >&2
 	exit 1
 fi
+
+
+#
+# Alternate modes
+#
+
+if [ -z "${scAction}" ]; then
+	echo "Please specify an action." >&2
+	exit 1
+elif [ "${scAction}" = "temps" ]; then
+	infoTemps
+	exit 0
+elif [ "${scAction}" = "fans" ]; then
+	infoFans
+	exit 0
+elif [ "${scAction}" = "daemon" ]; then
+	: # nothing currently needed here
+fi
+
+
+# Must be run as root
+if [ ! "$(whoami)" = "root" ]; then
+	echo "Must be run as root." >&2
+	exit 1
+fi
+
 
 # Set fans to auto on exit
 function scExit {
