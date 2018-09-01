@@ -21,9 +21,9 @@ difFanDuty="10" # The difference maintained between intake and exhaust fans
 
 
 # Temperatures in Celsius
-targetDriveTemp="30" # The temperature that we try to maintain.
+targetDriveTemp="31" # The temperature that we try to maintain.
 maxDriveTemp="39" # Do not let drives get hotter than this.
-ambTempVariance="2" # How many degrees the ambient temperature may effect the target
+ambTempVariance="1" # How many degrees the ambient temperature may effect the target
 
 # CPU settings
 # Currently unused
@@ -115,6 +115,7 @@ function ipmiRead {
 	FRNT_FAN[2]="$(hexConv "${rawFanAray[6]}")"
 	NIL_FAN[2]="$(hexConv "${rawFanAray[7]}")"
 
+	# Remap from MB supplied names.
 	HBA_FAN[0]="${FRNT_FAN[2]}"
 }
 
