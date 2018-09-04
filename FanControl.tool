@@ -195,15 +195,16 @@ function targetTemp {
 	done
 # 	Divide by number of sensors for average.
 	ambTemOut="$(bc <<< "scale=3;${ambTemOut} / ${#ambTempSens[@]}")"
-	ambTemComp="$(roundR "${ambTemOut}")"
+	ambTemRoun="$(roundR "${ambTemOut}")"
+	ambTemComp="$(bc <<< "scale=0;${ambTemOut} / 1")"
 
 # 	Alow the target temp to vary by $ambTempVariance degrees based on
 # 	a difference between ambent internal temp and $targetDriveTemp.
 	if [ "${ambTemComp}" = "${targetDriveTemp}" ]; then
 		echo "${ambTemOut}"
 	else
-		if [ "${ambTemComp}" -gt "${targetDriveTemp}" ]; then
-			if [ "${ambTemComp}" -gt "$(bc <<< "scale=0;${targetDriveTemp} + ${ambTempVariance}")" ]; then
+		if [ "${ambTemRoun}" -gt "${targetDriveTemp}" ]; then
+			if [ "${ambTemRoun}" -gt "$(bc <<< "scale=0;${targetDriveTemp} + ${ambTempVariance}")" ]; then
 				bc <<< "scale=3;${targetDriveTemp} + ${ambTempVariance}"
 				return 0
 			fi
