@@ -480,8 +480,9 @@ fi
 
 # Set fans to auto on exit
 function scExit {
-	setFanDuty "0" "0" "0"
-	exit 1
+	setFanDuty "${autoFanDuty}" "${autoFanDuty}" "${autoFanDuty}"
+	ipmiWrite
+	exit 0
 }
 
 trap 'scExit' EXIT
