@@ -207,6 +207,10 @@ push_header()
   echo_str "+-----------------------------------------------------------------------------"
 }
 
+command_exists()
+{
+  command -v "$1" >/dev/null 2>&1
+}
 
 check_required()
 {
