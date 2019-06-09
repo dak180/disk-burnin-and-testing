@@ -149,6 +149,9 @@ BB_Dir="."
 #
 ########################################################################
 
+# List of required programs
+required="grep pcregrep awk sed tr sleep badblocks"
+
 # Obtain the disk model and serial number:
 
 Disk_Model=$(smartctl -i /dev/"$Drive" | grep "Device Model" | awk '{print $3, $4, $5}' | sed -e 's/^[ \t]*//;s/[ \t]*$//' | sed -e 's/ /_/')
@@ -202,6 +205,19 @@ echo_str()
 push_header()
 {
   echo_str "+-----------------------------------------------------------------------------"
+}
+
+
+check_required()
+{
+  for i in $required; do
+    if ! command_exists $i; then
+      echo_str "$i required but not found. Aborting."
+      exit 1
+    else
+      echo_str "$i installed"
+    fi
+  done
 }
 
 poll_selftest_complete()
@@ -304,6 +320,13 @@ run_badblocks_test()
 if [ -e "$Log_File" ]; then
   rm "$Log_File"
 fi
+
+push_header
+echo_str "+ Checking list of required programs"
+push_header
+
+# Check required programs are installed
+check_required
 
 push_header
 echo_str "+ Started burn-in of /dev/${Drive} : $(date)"
