@@ -122,7 +122,7 @@
 #   returned by larger drives; we needed to strip out the '(' and ')' characters
 #   surrounding the integer value in order to fetch it reliably.
 #
-# ZK, 28 Sep 2019
+# ZK, 29 Sep 2019
 #   -Added support for SAS disks. SAS Support includes logic to for determining SAS vs SATA
 #    drive type and running type specific tests and outputing type specific report data.
 #   -Enhanced SATA drive checking by including a SMART conveyance test between initial
