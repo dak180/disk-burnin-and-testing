@@ -66,6 +66,8 @@ ada0
 ada1
 ada2
 ada3
+ada4
+ada5
 )
 
 
@@ -312,9 +314,9 @@ function infoTemps {
 	local ssdTempAv="0"
 
 	if [ ! "${#ssdName[@]}" = "0" ]; then
-		echo -e "Current SSD setpoint temp:\t$(targetTemp "${targetSSDriveTemp}")°C\n"
+		echo -e "Current SSD setpoint temp:\t$(targetTemp "${targetSSDriveTemp}")°C"
 	fi
-	echo -e "Current HD setpoint temp:\t$(targetTemp "${targetHDriveTemp}")°C\n\n"
+	echo -e "Current HD setpoint temp:\t$(targetTemp "${targetHDriveTemp}")°C\n"
 	if [ ! -z "${hbaTempSens[0]}" ]; then
 		echo -e "HBA Temp:\t$(ipmiSens "${hbaTempSens[0]}")°C"
 	fi
@@ -351,9 +353,9 @@ function infoTemps {
 	fi
 
 
-	echo -e "\n\nAverage HD Temp: ${hdTempAv}°C"
+	echo -e "\nAverage HD Temp: ${hdTempAv}°C"
 	if [ ! "${#ssdName[@]}" = "0" ]; then
-		echo -e "\nAverage SSD Temp: ${ssdTempAv}°C"
+		echo -e "Average SSD Temp: ${ssdTempAv}°C"
 	fi
 }
 
