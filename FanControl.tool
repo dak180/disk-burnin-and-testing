@@ -3,6 +3,8 @@
 #
 # Config
 #
+# shellcheck disable=SC2236
+#
 # ipmitool raw 0x3a 0x01  ${CPU_FAN1} ${Reserved} ${REAR_FAN1} ${REAR_FAN2} ${FRNT_FAN1} ${FRNT_FAN2} ${FRNT_FAN3} ${Reserved}
 
 # Write out a default config file
@@ -155,28 +157,28 @@ function cpuTemp {
 	local cpuTempMx="0"
 	read -ra numberCPUAray <<< "$(seq "0 ${numberCPU}")"
 
-	for coreCPU in ${numberCPUAray}; do
+	for coreCPU in "${numberCPUAray[@]}"; do
 		cpuTempCur="$(sysctl -n "dev.cpu.${coreCPU}.temperature" | sed -e 's:C::')"
 
 # 		Start adding temps for an average.
 		cpuTempAv="$(bc <<< "scale=3;${cpuTempCur} + ${cpuTempAv}")"
 
 # 		Keep track of the highest current temp
-		if [ "$(roundR "${hdTempMx}")" -gt "$(roundR "${hdTempCur}")" ]; then
-			hdTempMx="${hdTempMx}"
+		if [ "$(roundR "${cpuTempMx}")" -gt "$(roundR "${cpuTempCur}")" ]; then
+			cpuTempMx="${cpuTempMx}"
 		else
-			hdTempMx="${hdTempCur}"
+			cpuTempMx="${cpuTempCur}"
 		fi
 	done
 # 	Divide by number of CPUs for average.
-	hdTempAv="$(bc <<< "scale=3;${hdTempAv} / ${#hdName[@]}")"
+	hdTempAv="$(bc <<< "scale=3;${cpuTempAv} / ${#numberCPUAray[@]}")"
 
 # 	If the hottest CPU matches/exceeds the max temp use that
 # 	instead of the average.
 	if [ "${cpuTempMx}" -gt "${cpuTempCur}" ]; then
-		hdTempMx="${cpuTempMx}"
+		cpuTempMx="${cpuTempMx}"
 	else
-		hdTempMx="${cpuTempCur}"
+		cpuTempMx="${cpuTempCur}"
 	fi
 }
 
