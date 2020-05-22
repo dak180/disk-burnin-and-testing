@@ -23,7 +23,8 @@ difFanDuty="10" # The difference maintained between intake and exhaust fans
 
 
 # Temperatures in Celsius
-targetDriveTemp="31" # The temperature that we try to maintain.
+targetHDriveTemp="31" # The temperature that we try to maintain for HDs.
+targetSSDriveTemp="36" # The temperature that we try to maintain for SSDs.
 maxDriveTemp="39" # Do not let drives get hotter than this.
 ambTempVariance="1" # How many degrees the ambient temperature may effect the target
 
@@ -57,6 +58,10 @@ da4
 da5
 da6
 da7
+)
+
+# List of SSDs
+ssdName=(
 ada0
 ada1
 ada2
@@ -193,6 +198,7 @@ function targetTemp {
 	local ambTemIn
 	local ambTemOut="0"
 	local ambTemCur
+	local targetDiskTemp="${1}"
 
 	for ambTemIn in "${ambTempSens[@]}"; do
 # 		Get the current ambent temp readings.
@@ -206,18 +212,18 @@ function targetTemp {
 	ambTemComp="$(bc <<< "scale=0;${ambTemOut} / 1")"
 
 # 	Alow the target temp to vary by $ambTempVariance degrees based on
-# 	a difference between ambent internal temp and $targetDriveTemp.
-	if [ "${ambTemComp}" = "${targetDriveTemp}" ]; then
+# 	a difference between ambent internal temp and $targetDiskTemp.
+	if [ "${ambTemComp}" = "${targetDiskTemp}" ]; then
 		echo "${ambTemOut}"
 	else
-		if [ "${ambTemRoun}" -gt "${targetDriveTemp}" ]; then
-			if [ "${ambTemRoun}" -gt "$(bc <<< "scale=0;${targetDriveTemp} + ${ambTempVariance}")" ]; then
-				bc <<< "scale=3;${targetDriveTemp} + ${ambTempVariance}"
+		if [ "${ambTemRoun}" -gt "${targetDiskTemp}" ]; then
+			if [ "${ambTemRoun}" -gt "$(bc <<< "scale=0;${targetDiskTemp} + ${ambTempVariance}")" ]; then
+				bc <<< "scale=3;${targetDiskTemp} + ${ambTempVariance}"
 				return 0
 			fi
-		elif [ "${targetDriveTemp}" -gt "${ambTemComp}" ]; then
-			if [ "$(bc <<< "scale=0;${targetDriveTemp} - ${ambTempVariance}")" -gt "${ambTemComp}" ]; then
-				bc <<< "scale=3;${targetDriveTemp} - ${ambTempVariance}"
+		elif [ "${targetDiskTemp}" -gt "${ambTemComp}" ]; then
+			if [ "$(bc <<< "scale=0;${targetDiskTemp} - ${ambTempVariance}")" -gt "${ambTemComp}" ]; then
+				bc <<< "scale=3;${targetDiskTemp} - ${ambTempVariance}"
 				return 0
 			fi
 		fi
@@ -261,13 +267,54 @@ function hdTemp {
 }
 
 
+# Get average or high ssd temperature.
+function ssdTemp {
+	local ssdNum
+	local ssdTempCur
+	local ssdTempAv="0"
+	local ssdTempMx="0"
+
+	for ssdNum in "${ssdName[@]}"; do
+# 		Get the temp for the current drive.
+# 		194 is the standard SMART id for temp so we look for it at the
+# 		begining of the line.
+		ssdTempCur="$(smartctl -a "/dev/${ssdNum}" | grep "^194" | sed -E 's:[[:space:]]+: :g' | cut -d ' ' -f 10)"
+# 		Start adding temps for an average.
+		ssdTempAv="$(( ssdTempAv + ssdTempCur ))"
+
+# 		Keep track of the highest current temp
+		if [ "${ssdTempMx}" -gt "${ssdTempCur}" ]; then
+			ssdTempMx="${ssdTempMx}"
+		else
+			ssdTempMx="${ssdTempCur}"
+		fi
+	done
+# 	Divide by number of drives for average.
+	ssdTempAv="$(bc <<< "scale=3;${ssdTempAv} / ${#ssdName[@]}")"
+
+# 	If the hottest drive matches/exceeds the max temp use that instead
+# 	of the average.
+	if [ "${ssdTempMx}" -ge "${maxDriveTemp}" ]; then
+		echo "${ssdTempMx}"
+	else
+		echo "${ssdTempAv}"
+	fi
+}
+
+
 # Print temp info
 function infoTemps {
 	local hdNum
 	local hdTempCur
 	local hdTempAv="0"
+	local ssdNum
+	local ssdTempCur
+	local ssdTempAv="0"
 
-	echo -e "Current HD setpoint temp:\t$(targetTemp)°C\n\n"
+	if [ ! "${#ssdName[@]}" = "0" ]; then
+		echo -e "Current SSD setpoint temp:\t$(targetTemp "${targetSSDriveTemp}")°C\n"
+	fi
+	echo -e "Current HD setpoint temp:\t$(targetTemp "${targetHDriveTemp}")°C\n\n"
 	if [ ! -z "${hbaTempSens[0]}" ]; then
 		echo -e "HBA Temp:\t$(ipmiSens "${hbaTempSens[0]}")°C"
 	fi
@@ -286,7 +333,28 @@ function infoTemps {
 # 	Divide by number of drives for average.
 	hdTempAv="$(bc <<< "scale=3;${hdTempAv} / ${#hdName[@]}")"
 
+
+	if [ ! "${#ssdName[@]}" = "0" ]; then
+		for ssdNum in "${ssdName[@]}"; do
+# 			Get the temp for the current drive.
+# 			194 is the standard SMART id for temp so we look for it at
+# 			the begining of the line.
+			ssdTempCur="$(smartctl -a "/dev/${ssdNum}" | grep "^194" | sed -E 's:[[:space:]]+: :g' | cut -d ' ' -f 10)"
+# 			Start adding temps for an average.
+			ssdTempAv="$(( ssdTempAv + ssdTempCur ))"
+
+# 			Echo HD's current temp
+			echo -e "${ssdNum} Temp:\t${ssdTempCur}°C"
+		done
+# 		Divide by number of drives for average.
+		ssdTempAv="$(bc <<< "scale=3;${ssdTempAv} / ${#ssdName[@]}")"
+	fi
+
+
 	echo -e "\n\nAverage HD Temp: ${hdTempAv}°C"
+	if [ ! "${#ssdName[@]}" = "0" ]; then
+		echo -e "\nAverage SSD Temp: ${ssdTempAv}°C"
+	fi
 }
 
 
@@ -520,6 +588,12 @@ numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 : "${prevHDDerivativeVal:="0"}"
 : "${prevHDControlOutput:="100"}"
 
+: "${prevSSDErrorK:="0"}"
+: "${prevSSDProportionalVal:="0"}"
+: "${prevSSDIntegralVal:="0"}"
+: "${prevSSDDerivativeVal:="0"}"
+: "${prevSSDControlOutput:="100"}"
+
 : "${prevHBAErrorK:="0"}"
 : "${prevHBAProportionalVal:="0"}"
 : "${prevHBAIntegralVal:="0"}"
@@ -535,7 +609,7 @@ numberCPU="$(bc <<< "$(sysctl -n hw.ncpu) - 1")"
 while true; do
 # 	Calculate HD fan settings
 #
-	HDsetPoint="$(targetTemp)"
+	HDsetPoint="$(targetTemp "${targetHDriveTemp}")"
 	HDprocessVar="$(hdTemp)"
 
 # 	Get the error.
@@ -557,6 +631,35 @@ while true; do
 		qualHDControlOutput="${qualHDMinFanDuty}"
 	elif [ "${qualHDControlOutput}" -gt "${maxFanDuty}" ]; then
 		qualHDControlOutput="${maxFanDuty}"
+	fi
+
+
+	if [ ! "${#ssdName[@]}" = "0" ]; then
+# 		Calculate SSD fan settings
+#
+		SSDsetPoint="$(targetTemp "${targetSSDriveTemp}")"
+		SSDprocessVar="$(ssdTemp)"
+
+# 		Get the error.
+		SSDerrorK="$(bc <<< "scale=3;${SSDprocessVar} - ${SSDsetPoint}")"
+
+# 		Compute an unqualified control output (P+I+D).
+		SSDproportionalVal="$(proportionalK "${SSDerrorK}")"
+		SSDintegralVal="$(integralK "${SSDerrorK}" "${prevSSDIntegralVal}")"
+		SSDderivativeVal="$(derivativeK "${SSDerrorK}" "${prevSSDErrorK}")"
+
+		unQualSSDControlOutput="$(bc <<< "scale=3;${prevSSDControlOutput} + ${SSDproportionalVal} + ${SSDintegralVal} + ${SSDderivativeVal}")"
+
+# 		Qualify the output to ensure we are inside the constraints.
+		qualSSDMinFanDuty="$(bc <<< "${minFanDuty} + ${difFanDuty}")"
+		qualSSDMinFanDuty="$(roundR "${qualSSDMinFanDuty}")"
+		qualSSDControlOutput="$(roundR "${unQualSSDControlOutput}")"
+
+		if [ "${qualSSDControlOutput}" -lt "${qualSSDMinFanDuty}" ]; then
+			qualSSDControlOutput="${qualSSDMinFanDuty}"
+		elif [ "${qualSSDControlOutput}" -gt "${maxFanDuty}" ]; then
+			qualSSDControlOutput="${maxFanDuty}"
+		fi
 	fi
 
 
@@ -587,9 +690,16 @@ while true; do
 
 
 # 	We only need to set the fans if something changes.
-	if [ ! "${prevHDControlOutput}" = "${qualHDControlOutput}" ] || [ ! "${prevHBAControlOutput}" = "${qualHBAControlOutput}" ]; then
+	if [ ! "${prevHDControlOutput}" = "${qualHDControlOutput}" ] || [ ! "${prevHBAControlOutput}" = "${qualHBAControlOutput}" ] || [ ! "${prevSSDControlOutput}" = "${qualSSDControlOutput}" ]; then
+
+		if [ "${qualSSDControlOutput}" -gt "${qualHDControlOutput}" ]; then
+			qualDiskControlOutput="${qualSSDControlOutput}"
+		else
+			qualDiskControlOutput="${qualHDControlOutput}"
+		fi
+
 # 		Set the duty levels for each fan type.
-		setFanDuty "${autoFanDuty}" "${qualHBAControlOutput}" "${qualHDControlOutput}"
+		setFanDuty "${autoFanDuty}" "${qualHBAControlOutput}" "${qualDiskControlOutput}"
 
 
 # 		Write out the new duty levels to ipmi.
@@ -605,6 +715,12 @@ while true; do
 	prevHDIntegralVal="${HDintegralVal}"
 	prevHDDerivativeVal="${HDderivativeVal}"
 	prevHDControlOutput="${qualHDControlOutput}"
+
+	prevSSDErrorK="${SSDerrorK}"
+	prevSSDProportionalVal="${SSDproportionalVal}"
+	prevSSDIntegralVal="${SSDintegralVal}"
+	prevSSDDerivativeVal="${SSDderivativeVal}"
+	prevSSDControlOutput="${qualSSDControlOutput}"
 
 	prevHBAErrorK="${HBAerrorK}"
 	prevHBAProportionalVal="${HBAproportionalVal}"
