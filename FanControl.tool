@@ -86,8 +86,8 @@ ambTempSens[1]="Card Side Temp"	# Ambient temp
 # IPMI Fan Commands
 #
 # The script curently tracks five different types of fan values:
-# CPU_FAN is used for fans that directly cool the cpu.
-# HBA_FAN is used for fans that directly cool a HBA card.
+# CPU_FAN is used for fans that directly cools the cpu.
+# HBA_FAN is used for fans that directly cools a HBA card.
 # FRNT_FAN is used for intake fans.
 # REAR_FAN is used for exhaust fans.
 # NIL_FAN is used for space holder values that are not fans.
@@ -105,17 +105,22 @@ function ipmiWrite {
 # It conversts hex values to decimal and seperates them by type.
 function ipmiRead {
 	local rawFan
-	local rawFanAray
+	local rawFanArray
+
+	# Command to get current fan duty levels as a space separated list.
 	rawFan="$(ipmitool raw 0x3a 0x02 | sed -e 's:^ *::')"
-	read -ra rawFanAray <<< "${rawFan}"
-	CPU_FAN[0]="$(hexConv "${rawFanAray[0]}")"
-	NIL_FAN[0]="$(hexConv "${rawFanAray[1]}")"
-	REAR_FAN[0]="$(hexConv "${rawFanAray[2]}")"
-	NIL_FAN[1]="$(hexConv "${rawFanAray[3]}")"
-	FRNT_FAN[0]="$(hexConv "${rawFanAray[4]}")"
-	FRNT_FAN[1]="$(hexConv "${rawFanAray[5]}")"
-	FRNT_FAN[2]="$(hexConv "${rawFanAray[6]}")"
-	NIL_FAN[2]="$(hexConv "${rawFanAray[7]}")"
+
+	read -ra rawFanArray <<< "${rawFan}"
+
+	# Assign named values from the raw array.
+	CPU_FAN[0]="$(hexConv "${rawFanArray[0]}")"
+	NIL_FAN[0]="$(hexConv "${rawFanArray[1]}")"
+	REAR_FAN[0]="$(hexConv "${rawFanArray[2]}")"
+	NIL_FAN[1]="$(hexConv "${rawFanArray[3]}")"
+	FRNT_FAN[0]="$(hexConv "${rawFanArray[4]}")"
+	FRNT_FAN[1]="$(hexConv "${rawFanArray[5]}")"
+	FRNT_FAN[2]="$(hexConv "${rawFanArray[6]}")"
+	NIL_FAN[2]="$(hexConv "${rawFanArray[7]}")"
 
 	# Remap from MB supplied names.
 	HBA_FAN[0]="${FRNT_FAN[2]}"
@@ -150,14 +155,14 @@ function roundR {
 # Get average or high CPU temperature.
 function cpuTemp {
 	local numberCPU="${1}"
-	local numberCPUAray
+	local numberCPUArray
 	local coreCPU
 	local cpuTempCur
 	local cpuTempAv="0"
 	local cpuTempMx="0"
-	read -ra numberCPUAray <<< "$(seq "0 ${numberCPU}")"
+	read -ra numberCPUArray <<< "$(seq "0 ${numberCPU}")"
 
-	for coreCPU in "${numberCPUAray[@]}"; do
+	for coreCPU in "${numberCPUArray[@]}"; do
 		cpuTempCur="$(sysctl -n "dev.cpu.${coreCPU}.temperature" | sed -e 's:C::')"
 
 # 		Start adding temps for an average.
@@ -171,7 +176,7 @@ function cpuTemp {
 		fi
 	done
 # 	Divide by number of CPUs for average.
-	hdTempAv="$(bc <<< "scale=3;${cpuTempAv} / ${#numberCPUAray[@]}")"
+	hdTempAv="$(bc <<< "scale=3;${cpuTempAv} / ${#numberCPUArray[@]}")"
 
 # 	If the hottest CPU matches/exceeds the max temp use that
 # 	instead of the average.
