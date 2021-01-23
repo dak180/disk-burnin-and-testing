@@ -1,7 +1,7 @@
 +-----------------------------------------------------------------------------
-+ Started burn-in of /dev/sdf : Fri Sep 20 13:24:43 EDT 2019
++ Started burn-in of /dev/da2 : Sat Oct 19 20:12:16 EDT 2019
 +-----------------------------------------------------------------------------
-Hostname: cent7
+Hostname: fnas.local
 Drive Type: SAS
 Drive Brand: HITACHI
 Drive Model: HUS156060VLS600
@@ -10,23 +10,27 @@ Drive Capacity: 600 GB
 
 Test Details:
 Extended Test Length: 83 minutes | Sleep: 4980 seconds
-Short Test: NA for SAS
-Conveyance Test: NA for SAS
+Conveyance Test Length: NA for SAS
+     Short Test Length: NA for SAS
+---
+Smart Test Maximum Polling Time: 4 Hours
+Smart Test Recheck Polling Time: 60 Seconds
 
-Log File: ./Dtest-HUS156060VLS600_JWXV7BBJ_#09202019-1324.log
-Bad Blocks File: ./Dtest-HUS156060VLS600_JWXV7BBJ_#09202019-1324.bb
+Log File: ./Dtest-HUS156060VLS600_JWXV7BBJ_10192019-2012.log
+Bad Blocks File: ./Dtest-HUS156060VLS600_JWXV7BBJ_10192019-2012.bb
 
 
 +-----------------------------------------------------------------------------
 + Initial Drive Status
 +-----------------------------------------------------------------------------
-SMART Health Status: OK
-Current Drive Temperature:     34 C
+SMART Health Status: OK  
+Current Drive Temperature: 31 C 
 Elements in grown defect list: 0
+Accumulated power on time, hours:minutes 9842:45
 
-SAS OPTIONAL MANUFACTURER SPECIFIC DETAILS: (Man Date, start/stop Count, Powered on Hours)
+OPTIONAL MANUFACTURER DEPENDENT DETAILS: (Manufacture Date & Start/Stop Count)
 Manufactured in week 40 of year 2010
-Accumulated start-stop cycles:  422
+Accumulated start-stop cycles:  430
 
 ERROR LOG:
 
@@ -34,9 +38,9 @@ Error counter log:
            Errors Corrected by           Total   Correction     Gigabytes    Total
                ECC          rereads/    errors   algorithm      processed    uncorrected
            fast | delayed   rewrites  corrected  invocations   [10^9 bytes]  errors
-read:          0   860706         0    860706    2850994       9507.736           0
-write:         0  2496479         0   2496479    2121893       7911.606           0
-verify:        0   237220         0    237220      47781     250111.024           0
+read:          0   865164         0    865164    2855295      11983.504           0
+write:         0  2506409         0   2506409    2125833      10538.702           0
+verify:        0   237220         0    237220      47938     250111.024           0
 
 Non-medium error count:        1
 
@@ -44,27 +48,31 @@ Non-medium error count:        1
 SMART Self-test log
 Num  Test              Status                 segment  LifeTime  LBA_first_err [SK ASC ASQ]
      Description                              number   (hours)
-# 1  Background long   Completed                  16       0                 - [-   -    -]
-# 2  Background short  Completed                  16       0                 - [-   -    -]
+# 1  Background long   Completed                  16    9840                 - [-   -    -]
+# 2  Background long   Completed                  16    9171                 - [-   -    -]
+# 3  Background long   Completed                  16    9160                 - [-   -    -]
+# 4  Background long   Completed                  16       0                 - [-   -    -]
+# 5  Background short  Completed                  16       0                 - [-   -    -]
 
 Long (extended) Self Test duration: 4981 seconds [83.0 minutes]
 
 
 
 +-----------------------------------------------------------------------------
-+ RUN SMART Extended test on drive /dev/sdf: Fri Sep 20 13:24:43 EDT 2019
++ RUN SMART Extended test on drive /dev/da2: Sat Oct 19 20:12:16 EDT 2019
 +-----------------------------------------------------------------------------
 Extended test started, sleeping 4980 seconds until it finishes
 SAS SMART self-test complete
-# 1  Background long   Completed                  16    9160                 - [-   -    -]
-Finished SMART Extended test on drive /dev/sdf: Fri Sep 20 14:47:44 EDT 2019
+# 1  Background long   Completed                  16    9844                 - [-   -    -]
+Finished SMART Extended test on drive /dev/da2: Sat Oct 19 21:35:16 EDT 2019
 
 +-----------------------------------------------------------------------------
-+ RUN badblocks test on drive /dev/sdf: Fri Sep 20 14:47:44 EDT 2019
++ RUN badblocks test on drive /dev/da2: Sat Oct 19 21:35:16 EDT 2019
 +-----------------------------------------------------------------------------
 Checking for bad blocks in read-write mode
 From block 0 to 586061783
-Testing with pattern 0xaa: done                                                 
+Testing with pattern 0xaa: set_o_direct: Inappropriate ioctl for device
+done                                                 
 Reading and comparing: done                                                 
 Testing with pattern 0x55: done                                                 
 Reading and comparing: done                                                 
@@ -73,20 +81,20 @@ Reading and comparing: done
 Testing with pattern 0x00: done                                                 
 Reading and comparing: done                                                 
 Pass completed, 0 bad blocks found. (0/0/0 errors)
-Finished badblocks test on drive /dev/sdf: Fri Sep 20 23:57:40 EDT 2019
+Finished badblocks test on drive /dev/da2: Mon Oct 21 02:14:59 EDT 2019
 
 +-----------------------------------------------------------------------------
-+ RUN SMART Extended test on drive /dev/sdf: Fri Sep 20 23:57:40 EDT 2019
++ RUN SMART Extended test on drive /dev/da2: Mon Oct 21 02:14:59 EDT 2019
 +-----------------------------------------------------------------------------
 Extended test started, sleeping 4980 seconds until it finishes
 SAS SMART self-test complete
-# 1  Background long   Completed                  16    9171                 - [-   -    -]
-Finished SMART Extended test on drive /dev/sdf: Sat Sep 21 01:20:40 EDT 2019
+# 1  Background long   Completed                  16    9874                 - [-   -    -]
+Finished SMART Extended test on drive /dev/da2: Mon Oct 21 03:37:59 EDT 2019
 
 
 
 +-----------------------------------------------------------------------------
-+ COMPLETE SMART Information for drive /dev/sdf: Sat Sep 21 01:20:40 EDT 2019
++ COMPLETE SMART Information for drive /dev/da2: Mon Oct 21 03:37:59 EDT 2019
 +-----------------------------------------------------------------------------
 
 === START OF INFORMATION SECTION ===
@@ -102,7 +110,7 @@ Logical Unit id:      0x5000cca00fa0713c
 Serial number:        JWXV7BBJ
 Device type:          disk
 Transport protocol:   SAS (SPL-3)
-Local Time is:        Sat Sep 21 01:20:40 2019 EDT
+Local Time is:        Mon Oct 21 03:37:59 2019 EDT
 SMART support is:     Available - device has SMART capability.
 SMART support is:     Enabled
 Temperature Warning:  Disabled or Not Supported
@@ -111,50 +119,53 @@ Writeback Cache is:   Disabled
 
 SMART Health Status: OK
 
-Current Drive Temperature:     35 C
+Current Drive Temperature:     32 C
 Drive Trip Temperature:        85 C
 
 Manufactured in week 40 of year 2010
 Specified cycle count over device lifetime:  50000
-Accumulated start-stop cycles:  422
+Accumulated start-stop cycles:  430
 Elements in grown defect list: 0
 
 Vendor (Seagate) cache information
-  Blocks sent to initiator = 3840651242242048
+  Blocks sent to initiator = 4168407192698880
 
 Error counter log:
            Errors Corrected by           Total   Correction     Gigabytes    Total
                ECC          rereads/    errors   algorithm      processed    uncorrected
            fast | delayed   rewrites  corrected  invocations   [10^9 bytes]  errors
-read:          0   865000         0    865000    2855137      11908.777           0
-write:         0  2504850         0   2504850    2125110      10322.259           0
-verify:        0   237220         0    237220      47919     250111.024           0
+read:          0   865479         0    865479    2855326      14384.013           0
+write:         0  2518803         0   2518803    2131802      12939.211           0
+verify:        0   237220         0    237220      47949     250111.024           0
 
 Non-medium error count:        1
 
 SMART Self-test log
 Num  Test              Status                 segment  LifeTime  LBA_first_err [SK ASC ASQ]
      Description                              number   (hours)
-# 1  Background long   Completed                  16    9171                 - [-   -    -]
-# 2  Background long   Completed                  16    9160                 - [-   -    -]
-# 3  Background long   Completed                  16       0                 - [-   -    -]
-# 4  Background short  Completed                  16       0                 - [-   -    -]
+# 1  Background long   Completed                  16    9874                 - [-   -    -]
+# 2  Background long   Completed                  16    9844                 - [-   -    -]
+# 3  Background long   Completed                  16    9840                 - [-   -    -]
+# 4  Background long   Completed                  16    9171                 - [-   -    -]
+# 5  Background long   Completed                  16    9160                 - [-   -    -]
+# 6  Background long   Completed                  16       0                 - [-   -    -]
+# 7  Background short  Completed                  16       0                 - [-   -    -]
 
 Long (extended) Self Test duration: 4981 seconds [83.0 minutes]
 
 Background scan results log
-  Status: scan is active
-    Accumulated power on time, hours:minutes 9171:12 [550272 minutes]
-    Number of background scans performed: 201,  scan progress: 67.72%
-    Number of background medium scans performed: 201
+  Status: waiting until BMS interval timer expires
+    Accumulated power on time, hours:minutes 9874:11 [592451 minutes]
+    Number of background scans performed: 204,  scan progress: 0.00%
+    Number of background medium scans performed: 204
 
 Protocol Specific port log page for SAS SSP
 relative target port id = 1
-  generation code = 2
+  generation code = 1
   number of phys = 1
   phy identifier = 0
     attached device type: expander device
-    attached reason: power on
+    attached reason: loss of dword synchronization
     reason: unknown
     negotiated logical link rate: phy enabled; 6 Gbps
     attached initiator port: ssp=0 stp=0 smp=0
@@ -162,38 +173,38 @@ relative target port id = 1
     SAS address = 0x5000cca00fa0713d
     attached SAS address = 0x500c04f2f644c93f
     attached phy identifier = 24
-    Invalid DWORD count = 4
-    Running disparity error count = 3
-    Loss of DWORD synchronization = 2
+    Invalid DWORD count = 70
+    Running disparity error count = 64
+    Loss of DWORD synchronization = 60
     Phy reset problem = 0
     Phy event descriptors:
-     Invalid word count: 4
-     Running disparity error count: 3
-     Loss of dword synchronization count: 2
+     Invalid word count: 70
+     Running disparity error count: 64
+     Loss of dword synchronization count: 60
      Phy reset problem count: 0
 relative target port id = 2
-  generation code = 2
+  generation code = 1
   number of phys = 1
   phy identifier = 1
-    attached device type: expander device
-    attached reason: power on
-    reason: unknown
-    negotiated logical link rate: phy enabled; 6 Gbps
+    attached device type: no device attached
+    attached reason: unknown
+    reason: power on
+    negotiated logical link rate: phy enabled; unknown
     attached initiator port: ssp=0 stp=0 smp=0
-    attached target port: ssp=0 stp=0 smp=1
+    attached target port: ssp=0 stp=0 smp=0
     SAS address = 0x5000cca00fa0713e
-    attached SAS address = 0x500c04f2f644c9bf
-    attached phy identifier = 24
-    Invalid DWORD count = 5
-    Running disparity error count = 2
-    Loss of DWORD synchronization = 9
+    attached SAS address = 0x0
+    attached phy identifier = 0
+    Invalid DWORD count = 0
+    Running disparity error count = 0
+    Loss of DWORD synchronization = 0
     Phy reset problem = 0
     Phy event descriptors:
-     Invalid word count: 5
-     Running disparity error count: 2
-     Loss of dword synchronization count: 9
+     Invalid word count: 0
+     Running disparity error count: 0
+     Loss of dword synchronization count: 0
      Phy reset problem count: 0
 
 +-----------------------------------------------------------------------------
-+ Finished burn-in of /dev/sdf : Sat Sep 21 01:20:40 EDT 2019
++ Finished burn-in of /dev/da2 : Mon Oct 21 03:37:59 EDT 2019
 +-----------------------------------------------------------------------------
