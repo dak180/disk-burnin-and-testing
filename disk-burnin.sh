@@ -122,7 +122,7 @@
 #   returned by larger drives; we needed to strip out the '(' and ')' characters
 #   surrounding the integer value in order to fetch it reliably.
 #
-# ZK, 29 Sep 2019
+# ZK, 28 Sep 2019
 #   -Added support for SAS disks. SAS Support includes logic to for determining SAS vs SATA
 #    drive type and running type specific tests and outputing type specific report data.
 #   -Enhanced SATA drive checking by including a SMART conveyance test between initial
@@ -132,6 +132,11 @@
 #    comparison of initial and final drive states.
 #   -Modify code to leverage Temp_Smart variable that stores smartctl output to reduce the total
 #    number of smartctl calls to device.
+#
+# ZK, 19 Oct 2019
+#   -Modify FreeBSD Cleanup code to remove "smartctl 6.6" lines from log file
+#   -Validated revised script is POSIX comliant using the static analysis tool
+#    at https://www.shellcheck.net
 #
 ########################################################################
 
@@ -440,7 +445,7 @@ run_badblocks_test()
 #
 #   This is the command which erases all data on the disk:
 #
-    badblocks -c 4096 -b 1024 -wv -o "$BB_File" /dev/"$Drive" |& tee -a "$Log_File"
+    badblocks -c 4096 -b 1024 -wv -o "$BB_File" /dev/"$Drive" 2>&1 | tee -a "$Log_File"
   else
     echo_str "Dry run: would run badblocks -c 4096 -b 1024 -wv -o ${BB_File} /dev/${Drive}"
   fi
@@ -548,6 +553,7 @@ fi
 
 if [ "${osflavor}" = "FreeBSD" ]; then
   sed -i '' -e '/Copyright/d' "${Log_File}"
+  sed -i '' -e '/smartctl 6.6/d' "${Log_File}"
   sed -i '' -e '/=== START OF READ/d' "${Log_File}"
   sed -i '' -e '/SMART Attributes Data/d' "${Log_File}"
   sed -i '' -e '/Vendor Specific SMART/d' "${Log_File}"
