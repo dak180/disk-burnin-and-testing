@@ -138,6 +138,24 @@
 #   -Validated revised script is POSIX comliant using the static analysis tool
 #    at https://www.shellcheck.net
 #
+# ZK, 22 Jan 2021
+#   Functional OS Validation Completed On:
+#   - Centos 7 1804
+#   - Freenas 11.2-U6
+#
+#   Drives Tested:
+#   - Seagate ST3146356SS 146GB SAS (~3hrs)
+#   - Seagate ST3450856SS 450GB SAS (~10hrs)
+#   - Hitachi DKR2H-K450SS 450GB SAS (~10hrs)
+#   - Hitachi HUS154545VLS300 450GB SAS (~11hrs)
+#   - HP 0600FATFF 600GB SAS (~12hrs)
+#   - Seagate ST3600057SS 600GB SAS (~12hrs)
+#   - Hitachi HUS156060VLS600 600GB SAS (~12hrs)
+#
+#   - Seagate ST2000DL003 2TB SATA (~52hrs)
+#   - Seagate ST2000DM001 2TB SATA (~36hrs)
+#   - Seagate ST32000644NS 2TB SATA (~53hrs)
+#   
 ########################################################################
 
 # Check for valid script input - eg sda, sdb etc
