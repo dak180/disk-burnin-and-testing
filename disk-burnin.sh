@@ -195,6 +195,7 @@ fi
 
 #check if needed software is installed
 commands=(
+jq
 grep
 pcregrep
 awk
@@ -223,19 +224,19 @@ SMART_info="$(smartctl -i "/dev/${driveID}")"
 
 # Obtain the disk model:
 
-Disk_Model="$(echo "${SMART_info}" | grep "Device Model" | awk '{print $3, $4, $5}' | sed -e 's:^[ \t]*::' -e 's:[ \t]*$::' | sed -e 's: :_:')"
+Disk_Model="$(echo "${SMART_info}" | jq -Mre ".model_name")"
 
 if [ -z "$Disk_Model" ]; then
-  Disk_Model="$(echo "${SMART_info}" | grep "Model Family" | awk '{print $3, $4, $5}' | sed -e 's:^[ \t]*::' -e 's:[ \t]*$::' | sed -e 's: :_:')"
+  Disk_Model="$(echo "${SMART_info}" | jq -Mre ".model_family")"
 fi
 
 # Obtain the disk serial number:
 
-Serial_Number="$(echo "${SMART_info}"  | grep "Serial Number" | awk '{print $3}' | sed -e 's: :_:')"
+Serial_Number="$(echo "${SMART_info}"  | jq -Mre ".serial_number")"
 
 # Test to see if disk is a SSD:
 
-if echo "${SMART_info}" | grep "Rotation Rate:" | grep -q "Solid State Device"; then
+if [ "$(echo "${SMART_info}" | jq -Mre ".rotation_rate")" = "0" ]; then
 	driveType="ssd"
 fi
 
@@ -263,13 +264,13 @@ BB_File="${BB_Dir}/${BB_File}"
 # Query the short and extended test duration, in minutes. Use the values to
 # calculate how long we should sleep after starting the SMART tests:
 
-Short_Test_Minutes="$(echo "${SMART_capabilities}" | pcregrep -M 'Short self-test routine.*\n.*recommended polling time:' | sed -e 's:)::' -e 's:(::' | awk '{print $4}' | tr -d '\n')"
+Short_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre ".ata_smart_data.self_test.polling_minutes.short")"
 #printf "Short_Test_Minutes=[%s]\n" ${Short_Test_Minutes}
 
-Conveyance_Test_Minutes="$(echo "${SMART_capabilities}" | pcregrep -M 'Conveyance self-test routine.*\n.*recommended polling time:' | sed -e 's:)::' -e 's:(::' | awk '{print $4}' | tr -d '\n')"
+Conveyance_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre ".ata_smart_data.self_test.polling_minutes.conveyance")"
 #printf "Conveyance_Test_Minutes=[%s]\n" ${Conveyance_Test_Minutes}
 
-Extended_Test_Minutes="$(echo "${SMART_capabilities}" | pcregrep -M 'Extended self-test routine.*\n.*recommended polling time:' | sed -e 's:)::' -e 's:(::' | awk '{print $4}' | tr -d '\n')"
+Extended_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre ".ata_smart_data.self_test.polling_minutes.extended")"
 #printf "Extended_Test_Minutes=[%s]\n" ${Extended_Test_Minutes}
 
 Short_Test_Sleep="$((Short_Test_Minutes*60))"
@@ -362,7 +363,7 @@ run_short_test() {
 }
 
 run_conveyance_test() {
-	if [ -z "${Conveyance_Test_Minutes}" ]; then
+	if [ -z "${Conveyance_Test_Minutes}" ] || [ "${Conveyance_Test_Minutes}" = "null" ]; then
 		push_header
 		echo_str "+ SMART conveyance test not supported by /dev/${driveID}; skipping."
 		push_header
