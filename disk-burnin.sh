@@ -197,6 +197,9 @@ fi
 commands=(
 jq
 grep
+date
+tee
+smartctl
 pcregrep
 awk
 sed
@@ -293,7 +296,7 @@ Poll_Interval="15"
 ######################################################################
 
 echo_str() {
-  echo "$1" | tee -a "$Log_File"
+  echo "$1" | tee -a "${Log_File}"
 }
 
 push_header() {
@@ -345,7 +348,7 @@ run_short_test() {
 	echo_str "+ Run SMART short test on drive /dev/${driveID}: $(date)"
 	push_header
 
-	if [ "${Dry_Run}" -eq 0 ]; then
+	if [ "${Dry_Run}" -eq "0" ]; then
 		smartctl -d "${driveConnectionType}" -t short "/dev/${driveID}"
 
 		echo_str "Short test started, sleeping ${Short_Test_Sleep} seconds until it finishes"
@@ -354,7 +357,7 @@ run_short_test() {
 
 		poll_selftest_complete
 
-		smartctl -l selftest "/dev/${driveID}" | tee -a "$Log_File"
+		smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
 	else
 		echo_str "Dry run: would start the SMART short test and sleep ${Short_Test_Sleep} seconds until the test finishes"
 	fi
@@ -372,7 +375,7 @@ run_conveyance_test() {
 		echo_str "+ Run SMART conveyance test on drive /dev/${driveID}: $(date)."
 		push_header
 
-		if [ "${Dry_Run}" -eq 0 ]; then
+		if [ "${Dry_Run}" -eq "0" ]; then
 			smartctl -d "${driveConnectionType}" -t conveyance "/dev/${driveID}"
 
 			echo_str "Conveyance test started, sleeping ${Conveyance_Test_Sleep} seconds until it finishes."
@@ -381,7 +384,7 @@ run_conveyance_test() {
 
 			poll_selftest_complete
 
-			smartctl -l selftest "/dev/${driveID}" | tee -a "$Log_File"
+			smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
 		else
 			echo_str "Dry run: would start the SMART conveyance test and sleep ${Conveyance_Test_Sleep} seconds until the test finishes."
 		fi
@@ -395,7 +398,7 @@ run_extended_test() {
 	echo_str "+ Run SMART extended test on drive /dev/${driveID}: $(date)"
 	push_header
 
-	if [ "${Dry_Run}" -eq 0 ]; then
+	if [ "${Dry_Run}" -eq "0" ]; then
 		smartctl -d "${driveConnectionType}" -t long "/dev/${driveID}"
 
 		echo_str "Extended test started, sleeping ${Extended_Test_Sleep} seconds until it finishes"
@@ -404,7 +407,7 @@ run_extended_test() {
 
 		poll_selftest_complete
 
-		smartctl -l selftest "/dev/${driveID}" | tee -a "$Log_File"
+		smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
 	else
 		echo_str "Dry run: would start the SMART extended test and sleep ${Extended_Test_Sleep} seconds until the test finishes"
 	fi
@@ -421,7 +424,7 @@ run_badblocks_test() {
 		#
 		# This is the command which erases all data on the disk:
 		#
-		badblocks -b 4096 -wsv -o "$BB_File" "/dev/${driveID}"
+		badblocks -b 4096 -wsv -o "${BB_File}" "/dev/${driveID}"
 	else
 		echo_str "Dry run: would run badblocks -b 4096 -wsv -o ${BB_File} /dev/${driveID}"
 	fi
@@ -435,11 +438,11 @@ run_badblocks_test() {
 #
 ######################################################################
 
-if [ -e "$Log_File" ]; then
-  rm "$Log_File"
+if [ -e "${Log_File}" ]; then
+  rm "${Log_File}"
 fi
 
-tee -a "$Log_File" << EOF
+tee -a "${Log_File}" << EOF
 +-----------------------------------------------------------------------------
 + Started burn-in of /dev/${driveID} : $(date)
 +-----------------------------------------------------------------------------
@@ -467,7 +470,7 @@ if [ ! "${driveType}" = "ssd" ]; then
 fi
 
 # Emit full device information to log:
-tee -a "$Log_File" << EOF
+tee -a "${Log_File}" << EOF
 +-----------------------------------------------------------------------------
 + SMART information for drive /dev/${driveID}: $(date)
 +-----------------------------------------------------------------------------
@@ -484,6 +487,7 @@ osflavor=$(uname)
 if [ "${osflavor}" = "Linux" ]; then
 	sed -i -e '/Copyright/d' "${Log_File}"
 	sed -i -e '/=== START OF READ/d' "${Log_File}"
+	sed -i -e '/=== START OF SMART DATA SECTION ===/d' "${Log_File}"
 	sed -i -e '/SMART Attributes Data/d' "${Log_File}"
 	sed -i -e '/Vendor Specific SMART/d' "${Log_File}"
 	sed -i -e '/SMART Error Log Version/d' "${Log_File}"
@@ -492,6 +496,7 @@ fi
 if [ "${osflavor}" = "FreeBSD" ]; then
 	sed -i '' -e '/Copyright/d' "${Log_File}"
 	sed -i '' -e '/=== START OF READ/d' "${Log_File}"
+	sed -i '' -e '/=== START OF SMART DATA SECTION ===/d' "${Log_File}"
 	sed -i '' -e '/SMART Attributes Data/d' "${Log_File}"
 	sed -i '' -e '/Vendor Specific SMART/d' "${Log_File}"
 	sed -i '' -e '/SMART Error Log Version/d' "${Log_File}"
