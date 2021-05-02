@@ -224,19 +224,19 @@ SMART_info="$(smartctl -i "/dev/${driveID}")"
 
 # Obtain the disk model:
 
-Disk_Model="$(echo "${SMART_info}" | jq -Mre ".model_name")"
+Disk_Model="$(echo "${SMART_info}" | jq -Mre '.model_name | values')"
 
-if [ -z "$Disk_Model" ]; then
-  Disk_Model="$(echo "${SMART_info}" | jq -Mre ".model_family")"
+if [ -z "${Disk_Model}" ]; then
+  Disk_Model="$(echo "${SMART_info}" | jq -Mre '.model_family | values')"
 fi
 
 # Obtain the disk serial number:
 
-Serial_Number="$(echo "${SMART_info}"  | jq -Mre ".serial_number")"
+Serial_Number="$(echo "${SMART_info}"  | jq -Mre '.serial_number | values')"
 
 # Test to see if disk is a SSD:
 
-if [ "$(echo "${SMART_info}" | jq -Mre ".rotation_rate")" = "0" ]; then
+if [ "$(echo "${SMART_info}" | jq -Mre '.rotation_rate | values')" = "0" ]; then
 	driveType="ssd"
 fi
 
@@ -264,13 +264,13 @@ BB_File="${BB_Dir}/${BB_File}"
 # Query the short and extended test duration, in minutes. Use the values to
 # calculate how long we should sleep after starting the SMART tests:
 
-Short_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre ".ata_smart_data.self_test.polling_minutes.short")"
+Short_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre '.ata_smart_data.self_test.polling_minutes.short | values')"
 #printf "Short_Test_Minutes=[%s]\n" ${Short_Test_Minutes}
 
-Conveyance_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre ".ata_smart_data.self_test.polling_minutes.conveyance")"
+Conveyance_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre '.ata_smart_data.self_test.polling_minutes.conveyance | values')"
 #printf "Conveyance_Test_Minutes=[%s]\n" ${Conveyance_Test_Minutes}
 
-Extended_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre ".ata_smart_data.self_test.polling_minutes.extended")"
+Extended_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre '.ata_smart_data.self_test.polling_minutes.extended | values')"
 #printf "Extended_Test_Minutes=[%s]\n" ${Extended_Test_Minutes}
 
 Short_Test_Sleep="$((Short_Test_Minutes*60))"
