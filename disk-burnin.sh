@@ -95,7 +95,7 @@
 #
 # Requires the smartmontools, available at https://www.smartmontools.org
 #
-# Uses: grep, pcregrep, awk, sed, tr, sleep, badblocks
+# Uses: grep, awk, sed, tr, sleep, badblocks
 #
 # Written by Keith Nash, March 2017
 #
@@ -202,7 +202,6 @@ grep
 date
 tee
 smartctl
-pcregrep
 awk
 sed
 tr
