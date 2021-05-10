@@ -368,7 +368,7 @@ function run_short_test() {
 }
 
 function run_conveyance_test() {
-	if [ -z "${Conveyance_Test_Minutes}" ] || [ "${Conveyance_Test_Minutes}" = "null" ]; then
+	if [ -z "${Conveyance_Test_Minutes}" ]; then
 		push_header
 		echo_str "+ SMART conveyance test not supported by /dev/${driveID}; skipping."
 		push_header
