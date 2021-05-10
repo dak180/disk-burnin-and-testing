@@ -223,9 +223,9 @@ done
 ######################################################################
 
 
-SMART_capabilities="$(smartctl -c "/dev/${driveID}")"
+SMART_capabilities="$(smartctl -jc "/dev/${driveID}")"
 
-SMART_info="$(smartctl -i "/dev/${driveID}")"
+SMART_info="$(smartctl -ji "/dev/${driveID}")"
 
 # Obtain the disk model:
 
