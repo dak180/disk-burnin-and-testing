@@ -9,7 +9,7 @@
 #
 # Be aware that:
 #
-# 	1> This script runs the badblocks program in destructive mode, 
+# 	1> This script runs the badblocks program in destructive mode,
 # 	which erases any data on the disk.
 #
 # 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -136,7 +136,7 @@
 
 # tmux new -d -n da* /mnt/jails/scripts/disk-burnin.sh -td da*
 
-dbUsage() {
+function dbUsage() {
 	tee >&2 << EOF
 Usage: ${0} [-h] [-t] [-l directory] [-b directory] -d drive-device-specifier
 Run SMART tests and burn-in tests on a drive.
@@ -297,19 +297,19 @@ Poll_Interval="15"
 #
 ######################################################################
 
-echo_str() {
+function echo_str() {
   echo "$1" | tee -a "${Log_File}"
 }
 
-push_header() {
+function push_header() {
   echo_str "+-----------------------------------------------------------------------------"
 }
 
-poll_selftest_complete() {
-	l_rv="1"
-	l_status="0"
-	l_done="0"
-	l_pollduration="0"
+function poll_selftest_complete() {
+	local l_rv="1"
+	local l_status="0"
+	local l_done="0"
+	local l_pollduration="0"
 
 	# Check SMART results for "The previous self-test routine completed"
 	# Return 0 if the test has completed, 1 if we exceed our polling timeout interval
@@ -345,7 +345,7 @@ poll_selftest_complete() {
   return $l_rv
 }
 
-run_short_test() {
+function run_short_test() {
 	push_header
 	echo_str "+ Run SMART short test on drive /dev/${driveID}: $(date)"
 	push_header
@@ -367,7 +367,7 @@ run_short_test() {
 	echo_str "Finished SMART short test on drive /dev/${driveID}: $(date)"
 }
 
-run_conveyance_test() {
+function run_conveyance_test() {
 	if [ -z "${Conveyance_Test_Minutes}" ] || [ "${Conveyance_Test_Minutes}" = "null" ]; then
 		push_header
 		echo_str "+ SMART conveyance test not supported by /dev/${driveID}; skipping."
@@ -395,7 +395,7 @@ run_conveyance_test() {
 	fi
 }
 
-run_extended_test() {
+function run_extended_test() {
 	push_header
 	echo_str "+ Run SMART extended test on drive /dev/${driveID}: $(date)"
 	push_header
@@ -417,7 +417,7 @@ run_extended_test() {
 	echo_str "Finished SMART extended test on drive /dev/${driveID}: $(date)"
 }
 
-run_badblocks_test() {
+function run_badblocks_test() {
 	push_header
 	echo_str "+ Run badblocks test on drive /dev/${driveID}: $(date)"
 	push_header
