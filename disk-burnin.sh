@@ -241,7 +241,7 @@ Serial_Number="$(echo "${SMART_info}"  | jq -Mre '.serial_number | values')"
 
 # Test to see if disk is a SSD:
 
-if [ "$(echo "${SMART_info}" | jq -Mre '.rotation_rate | values')" = "0" ]; then
+if [ "$(echo "${SMART_info}" | jq -Mre '.rotation_rate | values')" = "0" ] || [ "$(echo "${SMART_info}" | jq -Mre '.device.type | values')" = "nvme" ]; then
 	driveType="ssd"
 fi
 
