@@ -305,43 +305,44 @@ function push_header() {
 }
 
 function poll_selftest_complete() {
-	local l_rv="1"
-	local l_status="0"
-	local l_done="0"
-	local l_pollduration="0"
+	local smrtOut="$(smartctl -ja "/dev/${driveID}")"
+	local smrtPrcnt="$(echo "${smrtOut}" | jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values')"
+	local pollDuration="0"
+	local st_rv="1"
 
-	# Check SMART results for "The previous self-test routine completed"
-	# Return 0 if the test has completed, 1 if we exceed our polling timeout interval
+	# Check SMART results for to see if the self-test routine completed.
+	# Return 0 if the test has completed,
+	# 1 if we exceed our polling timeout interval, and
+	# 2 if there is an error.
 
-	while [ "${l_done}" -eq "0" ]; do
-		smartctl -a "/dev/${driveID}" | grep -i "The previous self-test routine completed" > /dev/null 2<&1
-		l_status="${?}"
-
-		if [ "${l_status}" -eq "0" ]; then
-			echo_str "SMART self-test complete"
-			l_rv="0"
-			l_done="1"
+	while [ ! -z "${smrtPrcnt}" ]; do
+		# If the test has not finished yet wait until it does
+		if [ "${pollDuration}" -ge "${Poll_Timeout}" ]; then
+			echo_str "Timeout polling for SMART self-test status"
+			return "${st_rv}"
 		else
-			# Check for failure
-			smartctl -a "/dev/${driveID}" | grep -i "of the test failed." > /dev/null 2<&1
-			l_status="${?}"
-			if [ "${l_status}" -eq "0" ]; then
-				echo_str "SMART self-test failed"
-				l_rv="0"
-				l_done="1"
-			else
-				if [ "${l_pollduration}" -ge "${Poll_Timeout}" ]; then
-					echo_str "Timeout polling for SMART self-test status"
-					l_done="1"
-				else
-					sleep "${Poll_Interval}"
-					l_pollduration="$((l_pollduration+Poll_Interval))"
-				fi
-			fi
+			sleep "${Poll_Interval}"
+			pollDuration="$((pollDuration + Poll_Interval))"
 		fi
+
+		# Set the vars for the next run
+		smrtOut="$(smartctl -ja "/dev/${driveID}")"
+		smrtPrcnt="$(echo "${smrtOut}" | jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values')"
 	done
 
-  return $l_rv
+
+
+	if [ "$(echo "${smrtOut}" | jq -Mre '.ata_smart_data.self_test.status.passed | values')" = "true" ]; then
+		# Check for success
+		echo_str "SMART self-test complete"
+		st_rv="0"
+	else
+		echo_str "SMART self-test failed"
+		st_rv="2"
+	fi
+
+
+	return "${st_rv}"
 }
 
 function run_short_test() {
