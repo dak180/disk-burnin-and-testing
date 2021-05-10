@@ -426,9 +426,9 @@ function run_badblocks_test() {
 		#
 		# This is the command which erases all data on the disk:
 		#
-		badblocks -b 4096 -c 512 -wsv -o "${BB_File}" "/dev/${driveID}"
+		badblocks -b 4096 -c 32 -wsv -o "${BB_File}" "/dev/${driveID}"
 	else
-		echo_str "Dry run: would run badblocks -b 4096 -c 512 -wsv -o ${BB_File} /dev/${driveID}"
+		echo_str "Dry run: would run badblocks -b 4096 -c 32 -wsv -o ${BB_File} /dev/${driveID}"
 	fi
 
 	echo_str "Finished badblocks test on drive /dev/${driveID}: $(date)"
