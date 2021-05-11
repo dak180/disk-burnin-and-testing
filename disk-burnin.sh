@@ -259,11 +259,9 @@ fi
 
 # Form the log and bad blocks data filenames:
 
-Log_File="burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0).log"
-Log_File="${Log_Dir}/${Log_File}"
+Log_File="${Log_Dir}/burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0).log"
 
-BB_File="burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0).bb"
-BB_File="${BB_Dir}/${BB_File}"
+BB_File="${BB_Dir}/burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0).bb"
 
 # Query the short and extended test duration, in minutes. Use the values to
 # calculate how long we should sleep after starting the SMART tests:
@@ -424,9 +422,9 @@ function run_badblocks_test() {
 
 	if [ "${Dry_Run}" -eq "0" ]; then
 		#
-		# This is the command which erases all data on the disk:
+		# This command will erase all data on the disk:
 		#
-		badblocks -b 4096 -c 32 -wsv -o "${BB_File}" "/dev/${driveID}"
+		badblocks -b "4096" -c "32" -wsv -o "${BB_File}" "/dev/${driveID}"
 	else
 		echo_str "Dry run: would run badblocks -b 4096 -c 32 -wsv -o ${BB_File} /dev/${driveID}"
 	fi
