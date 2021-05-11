@@ -134,17 +134,15 @@
 #
 ########################################################################
 
-# tmux new -d -n da* /mnt/jails/scripts/disk-burnin.sh -td da*
-
 function dbUsage() {
 	tee >&2 << EOF
-Usage: ${0} [-h] [-t] [-l directory] [-b directory] -d drive-device-specifier
+Usage: ${0} [-h] [-t] [-l directory] [-b directory] {-d drive-device-specifier | -m drive-device-specifier-list}
 Run SMART tests and burn-in tests on a drive.
 ...
 
 Options:
 -h
-	Display this help and exit
+	Display this help and exit.
 
 -t
 	Needed to actually run the tests, By default ${0} will just do a dry run.
@@ -152,11 +150,14 @@ Options:
 -d
 	Drive Device Specifier.
 
+-m
+	Space separated list of Drive Device Specifiers to run via tmux.
+
 -l
-	Log files directory
+	Log files directory.
 
 -b
-	Bad blocks files directory
+	Bad blocks files directory.
 ...
 EOF
 }
@@ -165,10 +166,13 @@ Log_Dir="."
 BB_Dir="."
 Dry_Run=1
 
-while getopts ":d:l:b:th" OPTION; do
+while getopts ":d:m:l:b:th" OPTION; do
 	case "${OPTION}" in
 		d)
 			driveID="${OPTARG}"
+		;;
+		m)
+			driveIDs="${OPTARG}"
 		;;
 		l)
 			Log_Dir="${OPTARG}"
@@ -185,6 +189,17 @@ while getopts ":d:l:b:th" OPTION; do
 		;;
 	esac
 done
+
+
+if [ ! -z "${driveIDs}" ]; then
+	IFS=' ' read -a devIDs <<< "${driveIDs}"
+	for devID in "${devIDs[@]}"; do
+		tmux new -d -n "${devID}" "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/disk-burnin.sh" -td "${devID}"
+	done
+
+	exit 0
+fi
+
 
 if [ -z "${driveID}" ]; then
 	echo "error: No Drive Device Specifier." 1>&2
