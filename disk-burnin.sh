@@ -293,6 +293,7 @@ Extended_Test_Minutes="$(echo "${SMART_capabilities}" | jq -Mre '.ata_smart_data
 Short_Test_Sleep="$((Short_Test_Minutes*60))"
 Conveyance_Test_Sleep="$((Conveyance_Test_Minutes*60))"
 Extended_Test_Sleep="$((Extended_Test_Minutes*60))"
+Offline_Test_Sleep="$(echo "${SMART_capabilities}" | jq -Mre '.ata_smart_data.offline_data_collection.completion_seconds | values')"
 
 # Selftest polling timeout interval, in hours
 Poll_Timeout_Hours="4"
@@ -408,6 +409,36 @@ function run_conveyance_test() {
 	fi
 }
 
+function run_offline_test() {
+	if [ -z "${Offline_Test_Sleep}" ]; then
+		push_header
+		echo_str "+ SMART offline testing not supported by /dev/${driveID}; skipping."
+		push_header
+	else
+		push_header
+		echo_str "+ Run SMART offline test on drive /dev/${driveID}: $(date)."
+		push_header
+
+		if [ "${Dry_Run}" -eq "0" ]; then
+			smartctl -d "${driveConnectionType}" -t offline "/dev/${driveID}"
+
+			echo_str "Offline test started, sleeping ${Offline_Test_Sleep} seconds until it finishes."
+
+			sleep "${Offline_Test_Sleep}"
+
+			poll_selftest_complete
+
+			smartctl --offlineauto="on" "/dev/${driveID}" | tee -a "${Log_File}"
+
+			smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
+		else
+			echo_str "Dry run: would start the SMART offline test and sleep ${Offline_Test_Sleep} seconds until the test finishes."
+		fi
+
+		echo_str "Finished SMART offline test and activated automated testing (if supported) on drive /dev/${driveID}: $(date)."
+	fi
+}
+
 function run_extended_test() {
 	push_header
 	echo_str "+ Run SMART extended test on drive /dev/${driveID}: $(date)"
@@ -475,6 +506,7 @@ Bad blocks file: ${BB_File}
 EOF
 
 # Run the test sequence:
+run_offline_test
 run_short_test
 run_conveyance_test
 run_extended_test
@@ -482,6 +514,7 @@ if [ ! "${driveType}" = "ssd" ]; then
 	run_badblocks_test
 	run_short_test
 	run_extended_test
+	run_offline_test
 fi
 
 # Emit full device information to log:
