@@ -190,11 +190,44 @@ while getopts ":d:m:l:b:th" OPTION; do
 	esac
 done
 
+#check if needed software is installed
+commands=(
+jq
+grep
+date
+tee
+smartctl
+awk
+sed
+tr
+sleep
+badblocks
+)
+if [ ! -z "${driveIDs}" ]; then
+commands+=(
+tmux
+)
+fi
+for command in "${commands[@]}"; do
+	if ! type "${command}" &> /dev/null; then
+		echo "${command} is missing, please install"
+		exit 100
+	fi
+done
+
 
 if [ ! -z "${driveIDs}" ]; then
 	IFS=' ' read -a devIDs <<< "${driveIDs}"
 	for devID in "${devIDs[@]}"; do
-		tmux new -d -n "${devID}" "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/disk-burnin.sh" -td "${devID}"
+		if [ ! -e "/dev/${devID}" ]; then
+			echo "error: Drive Device Specifier ${devID} does not exist." 1>&2
+			exit 4
+		fi
+		if [ "${Dry_Run}" ="0" ]; then
+			tmux new -d -n "${devID}" "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/disk-burnin.sh" -td "${devID}"
+		else
+			echo "tmux new -d -n \"${devID}\" \"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/disk-burnin.sh\" -d \"${devID}\""
+		fi
 	done
 
 	exit 0
@@ -209,26 +242,6 @@ elif [ ! -e "/dev/${driveID}" ]; then
 	echo "error: Drive Device Specifier does not exist." 1>&2
 	exit 4
 fi
-
-#check if needed software is installed
-commands=(
-jq
-grep
-date
-tee
-smartctl
-awk
-sed
-tr
-sleep
-badblocks
-)
-for command in "${commands[@]}"; do
-	if ! type "${command}" &> /dev/null; then
-		echo "${command} is missing, please install"
-		exit 100
-	fi
-done
 
 ######################################################################
 #
