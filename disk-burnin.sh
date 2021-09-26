@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2236
 ########################################################################
 #
 # disk-burnin.sh
@@ -155,15 +156,11 @@ Options:
 
 -l
 	Log files directory.
-
--b
-	Bad blocks files directory.
 ...
 EOF
 }
 
 Log_Dir="."
-BB_Dir="."
 Dry_Run=1
 
 while getopts ":d:m:l:b:th" OPTION; do
@@ -176,9 +173,6 @@ while getopts ":d:m:l:b:th" OPTION; do
 		;;
 		l)
 			Log_Dir="${OPTARG}"
-		;;
-		b)
-			BB_Dir="${OPTARG}"
 		;;
 		t)
 			Dry_Run=0
@@ -217,16 +211,16 @@ done
 
 
 if [ ! -z "${driveIDs}" ]; then
-	IFS=' ' read -a devIDs <<< "${driveIDs}"
+	IFS=' ' read -ra devIDs <<< "${driveIDs}"
 	for devID in "${devIDs[@]}"; do
 		if [ ! -e "/dev/${devID}" ]; then
 			echo "error: Drive Device Specifier ${devID} does not exist." 1>&2
 			exit 4
 		fi
-		if [ "${Dry_Run}" ="0" ]; then
-			tmux new -d -n "${devID}" "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/disk-burnin.sh" -td "${devID}"
+		if [ "${Dry_Run}" = "0" ]; then
+			tmux new -d -n "${devID}" "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/$(basename "${0}")" -td "${devID}"
 		else
-			echo "tmux new -d -n \"${devID}\" \"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/disk-burnin.sh\" -d \"${devID}\""
+			echo "tmux new -d -n ${devID} \$( cd \$( dirname ${BASH_SOURCE[0]} ) &> /dev/null && pwd )/\$(basename ${0} -d ${devID}"
 		fi
 	done
 
@@ -352,10 +346,13 @@ function test_error() {
 }
 
 function poll_selftest_complete() {
-	local smrtOut="$(smartctl -ja "/dev/${driveID}")"
-	local smrtPrcnt="$(echo "${smrtOut}" | jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values')"
+	local smrtOut
+	local smrtPrcnt
 	local pollDuration="0"
 	local st_rv="1"
+
+	smrtOut="$(smartctl -ja "/dev/${driveID}")"
+	smrtPrcnt="$(echo "${smrtOut}" | jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values')"
 
 	# Check SMART results for to see if the self-test routine completed.
 	# Return 0 if the test has completed,
@@ -511,7 +508,7 @@ function run_badblocks_test() {
 		#
 		badblocks -b "4096" -c "32" -e "1" -wsv -o "${BB_File}" "/dev/${driveID}"
 	else
-		echo_str "Dry run: would run badblocks -b 4096 -c 32 -e "1" -wsv -o ${BB_File} /dev/${driveID}"
+		echo_str "Dry run: would run badblocks -b 4096 -c 32 -e 1 -wsv -o ${BB_File} /dev/${driveID}"
 	fi
 
 	echo_str "Finished badblocks test on drive /dev/${driveID}: $(date)"
