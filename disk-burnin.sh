@@ -281,7 +281,7 @@ fi
 
 # Form the log and bad blocks data filenames:
 
-Log_Name="${Log_Dir}/burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0)"
+Log_Name="${Log_Dir}/burnin-${Disk_Model}-${Serial_Number}-$(date -u +%Y%m%d-%H%M+0)"
 
 Log_File="${Log_Name}.log"
 
