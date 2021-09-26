@@ -287,9 +287,11 @@ fi
 
 # Form the log and bad blocks data filenames:
 
-Log_File="${Log_Dir}/burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0).log"
+Log_Name="${Log_Dir}/burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0)"
 
-BB_File="${BB_Dir}/burnin-${Disk_Model}_${Serial_Number}-$(date -u +%Y%m%d-%H%M+0).bb"
+Log_File="${Log_Name}.log"
+
+BB_File="${Log_Name}.bb"
 
 # Query the short and extended test duration, in minutes. Use the values to
 # calculate how long we should sleep after starting the SMART tests:
@@ -329,6 +331,24 @@ function echo_str() {
 
 function push_header() {
 	echo_str "+-----------------------------------------------------------------------------"
+}
+
+function test_error() {
+	local errNum="$1"
+
+	push_header
+	if [ "${errNum}" = "2" ]; then
+		echo_str "SMART test failed for ${driveID} (${Serial_Number}); exiting."
+	elif [ "${errNum}" = "1" ]; then
+		echo_str "SMART test timed out for ${driveID} (${Serial_Number}); exiting."
+	fi
+	push_header
+
+	smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
+
+	mv "${Log_File}" "${Log_Name}.error.log"
+
+	exit "${errNum}"
 }
 
 function poll_selftest_complete() {
@@ -384,7 +404,9 @@ function run_short_test() {
 
 		sleep "${Short_Test_Sleep}"
 
-		poll_selftest_complete
+		if ! poll_selftest_complete; then
+			test_error "${?}"
+		fi
 
 		smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
 	else
@@ -411,7 +433,9 @@ function run_conveyance_test() {
 
 			sleep "${Conveyance_Test_Sleep}"
 
-			poll_selftest_complete
+			if ! poll_selftest_complete; then
+				test_error "${?}"
+			fi
 
 			smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
 		else
@@ -464,7 +488,9 @@ function run_extended_test() {
 
 		sleep "${Extended_Test_Sleep}"
 
-		poll_selftest_complete
+		if ! poll_selftest_complete; then
+			test_error "${?}"
+		fi
 
 		smartctl -l selftest "/dev/${driveID}" | tee -a "${Log_File}"
 	else
