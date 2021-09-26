@@ -309,10 +309,10 @@ Extended_Test_Sleep="$((Extended_Test_Minutes*60))"
 Offline_Test_Sleep="$(echo "${SMART_capabilities}" | jq -Mre '.ata_smart_data.offline_data_collection.completion_seconds | values')"
 
 # Selftest polling timeout interval, in hours
-Poll_Timeout_Hours="4"
+Poll_Timeout_Divisor="5"
 
 # Calculate the selftest polling timeout interval in seconds
-Poll_Timeout="$((Poll_Timeout_Hours*60*60))"
+Poll_Timeout="$((Extended_Test_Sleep / Poll_Timeout_Divisor))"
 
 # Polling sleep interval, in seconds:
 Poll_Interval="15"
