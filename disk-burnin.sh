@@ -345,6 +345,21 @@ function test_error() {
 	exit "${errNum}"
 }
 
+function tler_activation() {
+	local tlerStatus
+
+	tlerStatus="$(smartctl -jl scterc "/dev/${driveID}" | jq -Mre '.ata_sct_erc | values')"
+
+
+	if [ ! -z "${tlerStatus}" ]; then
+		if [ ! "$(echo "${tlerStatus}" | jq -Mre '.read.enabled | values')" = "true" ] || [ ! "$(echo "${tlerStatus}" | jq -Mre '.write.enabled | values')" = "true" ]; then
+			smartctl -l scterc,70,70 "/dev/${driveID}"
+		fi
+	fi
+
+	smartctl -l scterc "/dev/${driveID}" | tail -n +3 | tee -a "${Log_File}"
+}
+
 function poll_selftest_complete() {
 	local smrtOut
 	local smrtPrcnt
@@ -542,6 +557,7 @@ Bad blocks file: ${BB_File}
 EOF
 
 # Run the test sequence:
+tler_activation
 run_offline_test
 run_short_test
 run_conveyance_test
