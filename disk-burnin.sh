@@ -585,6 +585,7 @@ EOF
 osflavor=$(uname)
 
 if [ "${osflavor}" = "Linux" ]; then
+	sed -i -e '/smartctl [6-9].[0-9]/d' "${Log_File}"
 	sed -i -e '/Copyright/d' "${Log_File}"
 	sed -i -e '/=== START OF READ/d' "${Log_File}"
 	sed -i -e '/=== START OF SMART DATA SECTION ===/d' "${Log_File}"
@@ -594,6 +595,7 @@ if [ "${osflavor}" = "Linux" ]; then
 fi
 
 if [ "${osflavor}" = "FreeBSD" ]; then
+	sed -i '' -e '/smartctl [6-9].[0-9]/d' "${Log_File}"
 	sed -i '' -e '/Copyright/d' "${Log_File}"
 	sed -i '' -e '/=== START OF READ/d' "${Log_File}"
 	sed -i '' -e '/=== START OF SMART DATA SECTION ===/d' "${Log_File}"
