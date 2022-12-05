@@ -525,12 +525,11 @@ function run_badblocks_test() {
 
 
 	# Badblocks can only address 32bits max
-	if [ "${bitMax}" -lt "${tBlockNumber}" ]; then
-		tBlockSize="$((pBlockSize * 2))"
-	else
-		tBlockSize="${pBlockSize}"
-	fi
-
+	tBlockSize="${pBlockSize}"
+	while [ "${bitMax}" -lt "${tBlockNumber}" ]; do
+		tBlockSize="$((tBlockSize * 2))"
+		tBlockNumber="$((tBlockNumber / 2))"
+	done
 
 
 	push_header
