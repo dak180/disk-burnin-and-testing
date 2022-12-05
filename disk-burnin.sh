@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2236
+# shellcheck disable=SC2236,SC2155
 ########################################################################
 #
 # disk-burnin.sh
@@ -305,7 +305,7 @@ Extended_Test_Sleep="$((Extended_Test_Minutes*60))"
 Offline_Test_Sleep="$(echo "${SMART_capabilities}" | jq -Mre '.ata_smart_data.offline_data_collection.completion_seconds | values')"
 
 # Selftest polling timeout interval, in hours
-Poll_Timeout_Divisor="5"
+Poll_Timeout_Divisor="20"
 
 # Calculate the selftest polling timeout interval in seconds
 Poll_Timeout="$((Extended_Test_Sleep / Poll_Timeout_Divisor))"
@@ -335,6 +335,8 @@ function test_error() {
 		echo_str "SMART test failed for ${driveID} (${Serial_Number}); exiting."
 	elif [ "${errNum}" = "1" ]; then
 		echo_str "SMART test timed out for ${driveID} (${Serial_Number}); exiting."
+	elif [ "${errNum}" = "9" ]; then
+		echo_str "Badblocks test failed for ${driveID} (${Serial_Number}); exiting."
 	fi
 	push_header
 
@@ -513,6 +515,24 @@ function run_extended_test() {
 }
 
 function run_badblocks_test() {
+	local pBlockSize="$(echo "${SMART_info}" | jq -Mre '.physical_block_size | values')"
+	local lBlockSize="$(echo "${SMART_info}" | jq -Mre '.logical_block_size | values')"
+	local blockNumber="$(echo "${SMART_info}" | jq -Mre '.user_capacity.blocks | values')"
+	local bitMax="4294967295"
+	local bRatio="$((pBlockSize / lBlockSize))"
+	local tBlockNumber="$((blockNumber / bRatio))"
+	local tBlockSize
+
+
+	# Badblocks can only address 32bits max
+	if [ "${bitMax}" -lt "${tBlockNumber}" ]; then
+		tBlockSize="$((pBlockSize * 2))"
+	else
+		tBlockSize="${pBlockSize}"
+	fi
+
+
+
 	push_header
 	echo_str "+ Run badblocks test on drive /dev/${driveID}: $(date)"
 	push_header
@@ -521,9 +541,11 @@ function run_badblocks_test() {
 		#
 		# This command will erase all data on the disk:
 		#
-		badblocks -b "4096" -c "32" -e "1" -wsv -o "${BB_File}" "/dev/${driveID}"
+		if ! badblocks -b "${tBlockSize}" -c "32" -e "1" -wsv -o "${BB_File}" "/dev/${driveID}"; then
+			test_error "9"
+		fi
 	else
-		echo_str "Dry run: would run badblocks -b 4096 -c 32 -e 1 -wsv -o ${BB_File} /dev/${driveID}"
+		echo_str "Dry run: would run badblocks -b ${tBlockSize} -c 32 -e 1 -wsv -o ${BB_File} /dev/${driveID}"
 	fi
 
 	echo_str "Finished badblocks test on drive /dev/${driveID}: $(date)"
