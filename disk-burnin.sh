@@ -223,6 +223,7 @@ if [ ! -z "${driveIDs}" ]; then
 			echo "tmux new -d -n ${devID} \$( cd \$( dirname ${BASH_SOURCE[0]} ) &> /dev/null && pwd )/\$(basename ${0} -d ${devID}"
 		fi
 	done
+	tmux ls
 
 	exit 0
 fi
