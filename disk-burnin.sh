@@ -188,6 +188,7 @@ done
 commands=(
 jq
 grep
+cut
 date
 tee
 smartctl
@@ -244,6 +245,8 @@ fi
 #
 ######################################################################
 
+
+SM_Vers="$(smartctl --version | grep 'smartctl [6-9].[0-9]' | cut -f "2" -d ' ')"
 
 SMART_capabilities="$(smartctl -jc "/dev/${driveID}")"
 
@@ -580,10 +583,14 @@ EOF
 
 # Run the test sequence:
 tler_activation
-run_offline_test
-run_short_test
-run_conveyance_test
-run_extended_test
+# shellcheck disable=SC2072
+if [[ "7.3" < "${SM_Vers}" ]] || [ ! "$(echo "${SMART_info}" | jq -Mre '.device.type | values')" = "nvme" ]; then
+	# Do not try to test with a version that cannot run NVMe tests
+	run_offline_test
+	run_short_test
+	run_conveyance_test
+	run_extended_test
+fi
 if [ ! "${driveType}" = "ssd" ]; then
 	run_badblocks_test
 	run_short_test
