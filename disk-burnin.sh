@@ -96,7 +96,7 @@
 #
 # Requires the smartmontools, available at https://www.smartmontools.org
 #
-# Uses: grep, awk, sed, tr, sleep, badblocks
+# Uses: grep, sed, tr, sleep, badblocks
 #
 # Written by Keith Nash, March 2017
 #
@@ -192,7 +192,6 @@ cut
 date
 tee
 smartctl
-awk
 sed
 tr
 sleep
