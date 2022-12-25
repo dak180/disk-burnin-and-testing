@@ -610,7 +610,7 @@ EOF
 
 # Clean up the log file:
 
-osflavor=$(uname)
+osflavor="$(uname)"
 
 if [ "${osflavor}" = "Linux" ]; then
 	sed -i -e '/smartctl [6-9].[0-9]/d' "${Log_File}"
