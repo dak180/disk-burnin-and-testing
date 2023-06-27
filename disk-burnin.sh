@@ -220,7 +220,7 @@ if [ ! -z "${driveIDs}" ]; then
 		if [ "${Dry_Run}" = "0" ]; then
 			tmux new -d -n "${devID}" "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/$(basename "${0}")" -td "${devID}"
 		else
-			echo "tmux new -d -n ${devID} \$( cd \$( dirname ${BASH_SOURCE[0]} ) &> /dev/null && pwd )/\$(basename ${0} -d ${devID}"
+			echo 'tmux new -d -n "${devID}" "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/$(basename "${0}")" -td "${devID}"'
 		fi
 	done
 	tmux ls
