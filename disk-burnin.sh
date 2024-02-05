@@ -18,87 +18,12 @@
 # 	!!! DO NOT RUN THIS SCRIPT ON DISKS CONTAINING DATA YOU VALUE !!!
 # 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
-# 	2> Run times for large disks can take several days to complete, so
+# 	2> Run times for large disks can take several days (or more) to complete, so
 # 	it is a good idea to use tmux sessions to prevent mishaps.
 #
 # 	3> Must be run as 'root'.
 #
-# 	4> Tests of large drives can take days to complete: use tmux!
-#
-# Performs these steps:
-#
-# 	1> Run SMART short test
-# 	2> Run SMART extended test
-# 	3> Run badblocks
-# 	4> Run SMART short test
-# 	5> Run SMART extended test
-#
-# The script sleeps after starting each SMART test, using a duration
-# based on the polling interval reported by the disk, after which the
-# script will poll the disk to verify the self-test has completed.
-#
-# Full SMART information is pulled after each SMART test. All output
-# except for the sleep command is echoed to both the screen and log file.
-#
-# You should monitor the burn-in progress and watch for errors, particularly
-# any errors reported by badblocks, or these SMART errors:
-#
-# 	5 Reallocated_Sector_Ct
-# 196 Reallocated_Event_Count
-# 197 Current_Pending_Sector
-# 198 Offline_Uncorrectable
-#
-# These indicate possible problems with the drive. You therefore may
-# wish to abort the remaining tests and proceed with an RMA exchange
-# for new drives or discard old ones. Also please note that this list
-# is not exhaustive.
-#
-# The script extracts the drive model and serial number and forms a
-# log filename of the form 'burnin-[model]_[serial number].log'.
-#
-# badblocks is invoked with a block size of 4096, the -wsv options,
-# and the -o option to instruct it to write the list of bad blocks
-# found (if any) to a file named 'burnin-[model]_[serial number].bb'.
-#
-# The only required command-line argument is the device specifier,
-# e.g.:
-#
-# 	./disk-burnin.sh sda
-#
-# ...will run the burn-in test on device /dev/sda
-#
-# You can run the script in 'dry run mode' (see below) to check the
-# sleep duration calculations and to insure that the sequence of
-# commands suits your needs. In 'dry runs' the script does not
-# actually perform any SMART tests or invoke the sleep or badblocks
-# programs. The script is distributed with 'dry runs' enabled, so you
-# will need to edit the Dry_Run variable below, setting it to 0, in
-# order to actually perform tests on drives.
-#
-# Before using the script on FreeBSD systems (including FreeNAS) you
-# must first execute this sysctl command to alter the kernel's
-# geometry debug flags. This allows badblocks to write to the entire
-# disk:
-#
-# 	sysctl kern.geom.debugflags=0x10
-#
-# Tested under:
-# 	FreeNAS 9.10.2 (FreeBSD 10.3-STABLE)
-# 	Ubuntu Server 16.04.2 LTS
-#
-# Tested on:
-# 	Intel DC S3700 SSD
-# 	Intel Model 320 Series SSD
-# 	HGST Deskstar NAS (HDN724040ALE640)
-# 	Hitachi/HGST Ultrastar 7K4000 (HUS724020ALE640)
-# 	Western Digital Re (WD4000FYYZ)
-# 	Western Digital Black (WD6001FZWX)
-#
-# Requires the smartmontools, available at https://www.smartmontools.org
-#
-# Uses: grep, sed, tr, sleep, badblocks
-#
-# Written by Keith Nash, March 2017
+# 	4> Read the README.md file before using.
 #
 # KN, 8 Apr 2017:
 # 	Added minimum test durations because some devices don't return
@@ -132,6 +57,11 @@
 # 	accommodate the values returned by larger drives; we needed to
 # 	strip out the '(' and ')' characters surrounding the integer value
 # 	in order to fetch it reliably.
+#
+# KN, 5 Feb 2024
+#
+#   Mostly rewritten by dak180
+#
 #
 ########################################################################
 
