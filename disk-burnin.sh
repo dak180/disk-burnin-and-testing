@@ -86,14 +86,35 @@ Options:
 
 -l
 	Log files directory.
+
+-L
+	Print list of Drive Device Specifiers and exit
 ...
 EOF
 }
 
+# Check if we are running on BSD
+if [[ "$(uname -mrs)" =~ .*"BSD".* ]]; then
+	systemType="BSD"
+fi
+
+# Get the version numbers for smartctl
+major_smartctl_vers="$(smartctl -jV | jq -Mre '.smartctl.version[] | values' | sed '1p;d')"
+minor_smartctl_vers="$(smartctl -jV | jq -Mre '.smartctl.version[] | values' | sed '2p;d')"
+if [[ "${major_smartctl_vers}" -gt "7" ]]; then
+	smartctl_vers_74_plus="true"
+elif [[ "${major_smartctl_vers}" -eq "7" ]] && [[ "${minor_smartctl_vers}" -ge "4" ]]; then
+	smartctl_vers_74_plus="true"
+elif [ -z "${major_smartctl_vers}" ]; then
+	echo "smartctl version 7 or greater is required" >&2
+	smartctl -V
+	exit 1
+fi
+
 Log_Dir="."
 Dry_Run=1
 
-while getopts ":d:m:l:b:th" OPTION; do
+while getopts ":d:m:l:Lth" OPTION; do
 	case "${OPTION}" in
 		d)
 			driveID="${OPTARG}"
@@ -103,6 +124,10 @@ while getopts ":d:m:l:b:th" OPTION; do
 		;;
 		l)
 			Log_Dir="${OPTARG}"
+		;;
+		L)
+			get_drive_list
+			exit 0
 		;;
 		t)
 			Dry_Run=0
@@ -130,6 +155,12 @@ badblocks
 if [ ! -z "${driveIDs}" ]; then
 commands+=(
 tmux
+)
+fi
+if [ "${systemType}" = "BSD" ]; then
+commands+=(
+sysctl
+# nvmecontrol
 )
 fi
 for command in "${commands[@]}"; do
@@ -251,6 +282,44 @@ Poll_Interval="15"
 # Local functions
 #
 ######################################################################
+
+function get_drive_list() {
+	local drives
+	local localDriveList
+
+	if [ "${systemType}" = "BSD" ]; then
+		localDriveList="$(sysctl -n kern.disks | sed -e 's:nvd:nvme:g')"
+	else
+		# shellcheck disable=SC2010
+		localDriveList="$(ls -l "/sys/block" | grep -v 'devices/virtual' | sed -e 's:[[:blank:]]\{1,\}: :g' | cut -d ' ' -f "9" | sed -e 's:n[0-9]\{1,\}$::g' | uniq )"
+		# lsblk -n -l -o NAME -E PKNAME | tr '\n' ' '
+	fi
+
+	if [ "${systemType}" = "BSD" ]; then
+		# This sort breaks on linux when going to four leter drive ids: "sdab"; it works fine for bsd's numbered drive ids though.
+		readarray -t "drives" <<< "$(for drive in ${localDriveList}; do
+			if [ "${smartctl_vers_74_plus}" = "true" ] && [ "$(smartctl -ji "/dev/${drive}" | jq -Mre '.smart_support.enabled | values')" = "true" ]; then
+				printf "%s\n" "${drive}"
+			elif smartctl -i "/dev/${drive}" | sed -e 's:[[:blank:]]\{1,\}: :g' | grep -q "SMART support is: Enabled"; then
+				printf "%s\n" "${drive}"
+			elif grep -q "nvme" <<< "${drive}"; then
+				printf "%s\n" "${drive}"
+			fi
+		done | sort -V | sed '/^nvme/!H;//p;$!d;g;s:\n::')"
+	else
+		readarray -t "drives" <<< "$(for drive in ${localDriveList}; do
+			if [ "${smartctl_vers_74_plus}" = "true" ] && [ "$(smartctl -ji "/dev/${drive}" | jq -Mre '.smart_support.enabled | values')" = "true" ]; then
+				printf "%s\n" "${drive}"
+			elif smartctl -i "/dev/${drive}" | sed -e 's:[[:blank:]]\{1,\}: :g' | grep -q "SMART support is: Enabled"; then
+				printf "%s\n" "${#drive} ${drive}"
+			elif grep -q "nvme" <<< "${drive}"; then
+				printf "%s\n" "${#drive} ${drive}"
+			fi
+		done | sort -Vbk 1 -k 2 | cut -d ' ' -f 2 | sed '/^nvme/!H;//p;$!d;g;s:\n::')"
+	fi
+
+	echo "${drives[@]}"
+}
 
 function echo_str() {
 	echo "$1" | tee -a "${Log_File}"
