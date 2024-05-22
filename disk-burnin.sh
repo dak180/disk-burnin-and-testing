@@ -65,6 +65,8 @@
 #
 ########################################################################
 
+## Prolog Functions
+
 function dbUsage() {
 	tee >&2 << EOF
 Usage: ${0} [-h] [-t] [-l directory] [-b directory] {-d drive-device-specifier | -m drive-device-specifier-list}
@@ -92,6 +94,45 @@ Options:
 ...
 EOF
 }
+
+function get_drive_list() {
+	local drives
+	local localDriveList
+
+	if [ "${systemType}" = "BSD" ]; then
+		localDriveList="$(sysctl -n kern.disks | sed -e 's:nvd:nvme:g')"
+	else
+		# shellcheck disable=SC2010
+		localDriveList="$(ls -l "/sys/block" | grep -v 'devices/virtual' | sed -e 's:[[:blank:]]\{1,\}: :g' | cut -d ' ' -f "9" | sed -e 's:n[0-9]\{1,\}$::g' | uniq )"
+		# lsblk -n -l -o NAME -E PKNAME | tr '\n' ' '
+	fi
+
+	if [ "${systemType}" = "BSD" ]; then
+		# This sort breaks on linux when going to four leter drive ids: "sdab"; it works fine for bsd's numbered drive ids though.
+		readarray -t "drives" <<< "$(for drive in ${localDriveList}; do
+			if [ "${smartctl_vers_74_plus}" = "true" ] && [ "$(smartctl -ji "/dev/${drive}" | jq -Mre '.smart_support.enabled | values')" = "true" ]; then
+				printf "%s\n" "${drive}"
+			elif smartctl -i "/dev/${drive}" | sed -e 's:[[:blank:]]\{1,\}: :g' | grep -q "SMART support is: Enabled"; then
+				printf "%s\n" "${drive}"
+			elif grep -q "nvme" <<< "${drive}"; then
+				printf "%s\n" "${drive}"
+			fi
+		done | sort -V | sed '/^nvme/!H;//p;$!d;g;s:\n::')"
+	else
+		readarray -t "drives" <<< "$(for drive in ${localDriveList}; do
+			if [ "${smartctl_vers_74_plus}" = "true" ] && [ "$(smartctl -ji "/dev/${drive}" | jq -Mre '.smart_support.enabled | values')" = "true" ]; then
+				printf "%s\n" "${drive}"
+			elif smartctl -i "/dev/${drive}" | sed -e 's:[[:blank:]]\{1,\}: :g' | grep -q "SMART support is: Enabled"; then
+				printf "%s\n" "${#drive} ${drive}"
+			elif grep -q "nvme" <<< "${drive}"; then
+				printf "%s\n" "${#drive} ${drive}"
+			fi
+		done | sort -Vbk 1 -k 2 | cut -d ' ' -f 2 | sed '/^nvme/!H;//p;$!d;g;s:\n::')"
+	fi
+
+	echo "${drives[@]}"
+}
+
 
 # Check if we are running on BSD
 if [[ "$(uname -mrs)" =~ .*"BSD".* ]]; then
@@ -282,44 +323,6 @@ Poll_Interval="15"
 # Local functions
 #
 ######################################################################
-
-function get_drive_list() {
-	local drives
-	local localDriveList
-
-	if [ "${systemType}" = "BSD" ]; then
-		localDriveList="$(sysctl -n kern.disks | sed -e 's:nvd:nvme:g')"
-	else
-		# shellcheck disable=SC2010
-		localDriveList="$(ls -l "/sys/block" | grep -v 'devices/virtual' | sed -e 's:[[:blank:]]\{1,\}: :g' | cut -d ' ' -f "9" | sed -e 's:n[0-9]\{1,\}$::g' | uniq )"
-		# lsblk -n -l -o NAME -E PKNAME | tr '\n' ' '
-	fi
-
-	if [ "${systemType}" = "BSD" ]; then
-		# This sort breaks on linux when going to four leter drive ids: "sdab"; it works fine for bsd's numbered drive ids though.
-		readarray -t "drives" <<< "$(for drive in ${localDriveList}; do
-			if [ "${smartctl_vers_74_plus}" = "true" ] && [ "$(smartctl -ji "/dev/${drive}" | jq -Mre '.smart_support.enabled | values')" = "true" ]; then
-				printf "%s\n" "${drive}"
-			elif smartctl -i "/dev/${drive}" | sed -e 's:[[:blank:]]\{1,\}: :g' | grep -q "SMART support is: Enabled"; then
-				printf "%s\n" "${drive}"
-			elif grep -q "nvme" <<< "${drive}"; then
-				printf "%s\n" "${drive}"
-			fi
-		done | sort -V | sed '/^nvme/!H;//p;$!d;g;s:\n::')"
-	else
-		readarray -t "drives" <<< "$(for drive in ${localDriveList}; do
-			if [ "${smartctl_vers_74_plus}" = "true" ] && [ "$(smartctl -ji "/dev/${drive}" | jq -Mre '.smart_support.enabled | values')" = "true" ]; then
-				printf "%s\n" "${drive}"
-			elif smartctl -i "/dev/${drive}" | sed -e 's:[[:blank:]]\{1,\}: :g' | grep -q "SMART support is: Enabled"; then
-				printf "%s\n" "${#drive} ${drive}"
-			elif grep -q "nvme" <<< "${drive}"; then
-				printf "%s\n" "${#drive} ${drive}"
-			fi
-		done | sort -Vbk 1 -k 2 | cut -d ' ' -f 2 | sed '/^nvme/!H;//p;$!d;g;s:\n::')"
-	fi
-
-	echo "${drives[@]}"
-}
 
 function echo_str() {
 	echo "$1" | tee -a "${Log_File}"
