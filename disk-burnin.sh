@@ -315,6 +315,11 @@ Poll_Timeout_Divisor="20"
 # Calculate the selftest polling timeout interval in seconds
 Poll_Timeout="$((Extended_Test_Sleep / Poll_Timeout_Divisor))"
 
+# Make sure the poll timeout is at least 15 mins
+if [ "${Poll_Timeout}" -lt "900" ]; then
+  Poll_Timeout="$((Poll_Timeout + 900 ))"
+fi
+
 # Polling sleep interval, in seconds:
 Poll_Interval="15"
 
@@ -374,7 +379,7 @@ function poll_selftest_complete() {
 	local st_rv="1"
 
 	smrtOut="$(smartctl -ja "/dev/${driveID}")"
-	smrtPrcnt="$(echo "${smrtOut}" | jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values')"
+	smrtPrcnt="$(jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values' <<< "${smrtOut}")"
 
 	# Check SMART results for to see if the self-test routine completed.
 	# Return 0 if the test has completed,
@@ -393,7 +398,7 @@ function poll_selftest_complete() {
 
 		# Set the vars for the next run
 		smrtOut="$(smartctl -ja "/dev/${driveID}")"
-		smrtPrcnt="$(echo "${smrtOut}" | jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values')"
+		smrtPrcnt="$(jq -Mre '.ata_smart_data.self_test.status.remaining_percent | values' <<< "${smrtOut}")"
 	done
 
 
@@ -587,10 +592,10 @@ tler_activation
 # shellcheck disable=SC2072
 if [[ "7.3" < "${SM_Vers}" ]] || [ ! "$(echo "${SMART_info}" | jq -Mre '.device.type | values')" = "nvme" ]; then
 	# Do not try to test with a version that cannot run NVMe tests
-	run_offline_test
 	run_short_test
 	run_conveyance_test
 	run_extended_test
+	run_offline_test
 fi
 if [ ! "${driveType}" = "ssd" ]; then
 	run_badblocks_test
