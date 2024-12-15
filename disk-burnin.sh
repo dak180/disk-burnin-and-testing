@@ -212,6 +212,13 @@ for command in "${commands[@]}"; do
 done
 
 
+# Must be run as root for effect
+if [ ! "$(whoami)" = "root" ] && [ ! "${Dry_Run}" = "0" ]; then
+	echo "Must be run as root." >&2
+	exit 1
+fi
+
+
 if [ ! -z "${driveIDs}" ]; then
 	IFS=' ' read -ra devIDs <<< "${driveIDs}"
 	for devID in "${devIDs[@]}"; do
