@@ -99,13 +99,7 @@ function get_drive_list() {
 	local drives
 	local localDriveList
 
-	if [ "${systemType}" = "BSD" ]; then
-		localDriveList="$(sysctl -n kern.disks | sed -e 's:nvd:nvme:g')"
-	else
-		# shellcheck disable=SC2010
-		localDriveList="$(ls -l "/sys/block" | grep -v 'devices/virtual' | sed -e 's:[[:blank:]]\{1,\}: :g' | cut -d ' ' -f "9" | sed -e 's:n[0-9]\{1,\}$::g' | uniq )"
-		# lsblk -n -l -o NAME -E PKNAME | tr '\n' ' '
-	fi
+	localDriveList="$(smartctl --scan | cut -d ' ' -f "1" | sed -e 's:/dev/::')"
 
 	if [ "${systemType}" = "BSD" ]; then
 		# This sort breaks on linux when going to four leter drive ids: "sdab"; it works fine for bsd's numbered drive ids though.
